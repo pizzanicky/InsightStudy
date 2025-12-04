@@ -468,13 +468,15 @@ processes = {
     'insight': {'process': None, 'port': 8501, 'status': 'stopped', 'output': [], 'log_file': None},
     'media': {'process': None, 'port': 8502, 'status': 'stopped', 'output': [], 'log_file': None},
     'query': {'process': None, 'port': 8503, 'status': 'stopped', 'output': [], 'log_file': None},
+    'daily_digest': {'process': None, 'port': 8504, 'status': 'stopped', 'output': [], 'log_file': None},
     'forum': {'process': None, 'port': None, 'status': 'stopped', 'output': [], 'log_file': None}  # 启动后标记为 running
 }
 
 STREAMLIT_SCRIPTS = {
     'insight': 'SingleEngineApp/insight_engine_streamlit_app.py',
     'media': 'SingleEngineApp/media_engine_streamlit_app.py',
-    'query': 'SingleEngineApp/query_engine_streamlit_app.py'
+    'query': 'SingleEngineApp/query_engine_streamlit_app.py',
+    'daily_digest': 'SingleEngineApp/daily_digest_streamlit_app.py'
 }
 
 # 输出队列
@@ -482,6 +484,7 @@ output_queues = {
     'insight': Queue(),
     'media': Queue(),
     'query': Queue(),
+    'daily_digest': Queue(),
     'forum': Queue()
 }
 
@@ -607,6 +610,7 @@ def start_streamlit_app(app_name, script_path, port):
             sys.executable, '-m', 'streamlit', 'run',
             script_path,
             '--server.port', str(port),
+            '--server.address', '0.0.0.0',
             '--server.headless', 'true',
             '--browser.gatherUsageStats', 'false',
             # '--logger.level', 'debug',  # 增加日志详细程度
@@ -1010,17 +1014,16 @@ def get_system_status():
         logger.info(f"检测到运行中的应用: {running_apps}，自动标记系统为已启动")
         _set_system_state(started=True)
     
-    # 如果配置已完整（.env文件中有必要的配置），也标记为已启动
-    # 这样用户不需要每次都手动填写配置
-    if not system_state['started'] and check_config_completeness():
-        logger.info("检测到.env文件配置完整，自动标记系统为已配置")
-        _set_system_state(started=True)
-    
     state = _get_system_state()
+    
+    # 检查配置是否完整
+    is_config_complete = check_config_completeness()
+    
     return jsonify({
         'success': True,
         'started': state['started'],
-        'starting': state['starting']
+        'starting': state['starting'],
+        'config_complete': is_config_complete
     })
 
 

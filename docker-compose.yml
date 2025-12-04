@@ -13,6 +13,7 @@ services:
       - "8501:8501"
       - "8502:8502"
       - "8503:8503"
+      - "8504:8504"
     volumes:
       - ./.env:/app/.env
       - ./logs:/app/logs
@@ -21,6 +22,10 @@ services:
       - ./media_engine_streamlit_reports:/app/media_engine_streamlit_reports
       - ./query_engine_streamlit_reports:/app/query_engine_streamlit_reports
       - ./MindSpider:/app/MindSpider
+      - ./app.py:/app/app.py
+      - ./templates:/app/templates
+      - ./SingleEngineApp:/app/SingleEngineApp
+      - ./DailyDigest:/app/DailyDigest
 
   db:
     image: postgres:15
