@@ -125,7 +125,7 @@ class DailyDigest:
         posts_text = self.format_posts_for_llm(posts)
         
         # 3. Construct Prompt
-        prompt = DAILY_DIGEST_PROMPT.format(keyword=keyword, posts_text=posts_text)
+        prompt = DAILY_DIGEST_PROMPT.format(keyword=keyword, hours=hours, posts_text=posts_text)
         
         # 4. Call LLM
         try:
