@@ -3,35 +3,37 @@ Daily Digest Prompts
 """
 
 DAILY_DIGEST_PROMPT = """
-You are a professional social media sentiment analyst. Your task is to generate a "Daily Digest" based on the provided Reddit posts about the keyword: "{keyword}".
+你是一位专业的社交媒体舆情分析师。你的任务是基于提供的关于关键词 "{keyword}" 的 Reddit 帖子生成"每日舆情摘要"。
 
-The posts are from the last 24 hours.
+这些帖子来自过去 {hours} 小时。
 
-Please analyze the following posts and provide a summary in Markdown format.
+请分析以下帖子并以 Markdown 格式提供摘要。
 
-**Input Data:**
+**输入数据：**
 {posts_text}
 
-**Output Requirements:**
+**输出要求：**
 
-1.  **Overall Sentiment**: (Bullish/Bearish/Neutral) with a brief explanation (1-2 sentences).
-2.  **Key Topics**: List 3-5 main topics or themes discussed.
-3.  **Summary**: A concise paragraph summarizing the general discussion, highlighting any major news, rumors, or community reactions.
-4.  **Top Posts Highlight**: Briefly mention 1-2 most significant posts (if any).
+1.  **整体情绪**：（看涨/看跌/中性）并简要说明原因（1-2 句话）。
+2.  **关键话题**：列出 3-5 个主要讨论的话题或主题。
+3.  **总结**：简明扼要地总结整体讨论，突出任何重大新闻、传闻或社区反应。
+4.  **热门帖子亮点**：简要提及 1-2 个最重要的帖子（如果有）。
 
-**Format:**
+**格式：**
 
-## 📊 Daily Sentiment: [Sentiment]
+## 📊 每日情绪：[情绪]
 
-**Key Topics:**
-*   Topic 1
-*   Topic 2
+**关键话题：**
+*   话题 1
+*   话题 2
 *   ...
 
-**Summary:**
-[Your summary here]
+**总结：**
+[你的总结内容]
 
-**Highlights:**
-*   [Highlight 1]
-*   [Highlight 2]
+**亮点：**
+*   [亮点 1]
+*   [亮点 2]
+
+**注意：请用中文回复所有内容。**
 """
