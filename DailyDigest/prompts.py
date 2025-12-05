@@ -36,4 +36,14 @@ DAILY_DIGEST_PROMPT = """
 *   [亮点 2]
 
 **注意：请用中文回复所有内容。**
+
+Finally, output a JSON object (and ONLY the JSON) at the very end of your response for the cover card, with these fields:
+
+*   `ticker`: The stock symbol (e.g., IONQ).
+*   `sentiment_score`: A number 0-10 (0 bearish, 10 bullish).
+*   `sentiment_label`: A 2-character Chinese word (e.g., 极热, 看涨, 观望, 分歧, 恐慌).
+*   `headline`: A professional, insight-driven headline (Max 15 chars, e.g., '量子算力变现能力的验证期').
+*   `key_factors`: A list of 3 short phrases (Max 6 chars each) driving this sentiment (e.g., ["财报超预期", "空头回补", "AI叙事"]).
+
+Ensure the JSON is valid and appears at the very end of the response.
 """

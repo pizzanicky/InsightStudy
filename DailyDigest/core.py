@@ -130,11 +130,39 @@ class DailyDigest:
         # 4. Call LLM
         try:
             logger.info(f"Generating summary for '{keyword}'...")
-            summary = self.llm.chat(prompt)
+            logger.info(f"Prompt length: {len(prompt)} characters")
             
+            import time
+            start_time = time.time()
+            response_text = self.llm.chat(prompt)
+            end_time = time.time()
+            logger.info(f"LLM call took {end_time - start_time:.2f} seconds")
+            
+            # Parse JSON from the end
+            import json
+            import re
+            
+            summary = response_text
+            cover_card_data = {}
+            
+            try:
+                # Find the last JSON object
+                # We look for the last '{' which likely starts the JSON
+                last_brace_idx = response_text.rfind('{')
+                if last_brace_idx != -1:
+                    json_text = response_text[last_brace_idx:]
+                    # Remove any trailing markdown code block markers
+                    json_text = re.sub(r'```\s*$', '', json_text).strip()
+                    
+                    cover_card_data = json.loads(json_text)
+                    summary = response_text[:last_brace_idx].strip()
+            except Exception as e:
+                logger.warning(f"Failed to parse cover card JSON: {e}")
+
             return {
                 "success": True,
                 "summary": summary,
+                "cover_card": cover_card_data,
                 "post_count": len(posts),
                 "top_posts": [
                     {
