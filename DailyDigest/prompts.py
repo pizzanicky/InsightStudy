@@ -35,7 +35,7 @@ DAILY_DIGEST_PROMPT = """
 *   [亮点 1]
 *   [亮点 2]
 
-**注意：请用中文回复所有内容。**
+**注意：请用中文回复所有内容。输出结果中不要暴露原贴用户ID信息，不要提及Reddit**
 
 Finally, output a JSON object (and ONLY the JSON) at the very end of your response for the cover card, with these fields:
 

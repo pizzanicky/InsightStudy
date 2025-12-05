@@ -234,9 +234,9 @@ if generate_btn or (auto_run and keyword):
                             st.code(result["summary"], language="markdown")
                         
                     with col2:
-                        st.markdown("### 🔥 Top Posts")
+                        st.markdown("### 🔥 热门讨论")
                         for post in result["top_posts"]:
-                            with st.expander(f"Score: {post['score']} | 💬 {post['comments']}"):
+                            with st.expander(f"热度: {post['score']} | 💬 {post['comments']}"):
                                 st.write(post['content'])
                                 if post.get('url'):
                                     st.markdown(f"[View on Reddit]({post['url']})")

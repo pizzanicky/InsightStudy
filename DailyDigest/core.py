@@ -88,22 +88,22 @@ class DailyDigest:
     def format_posts_for_llm(self, posts):
         """
         Format posts into a text string for the LLM.
+        保护隐私：不包含用户ID和来源信息
         """
         if not posts:
             return "No posts found."
             
         formatted_text = ""
-        for i, post in enumerate(posts[:50]): # Limit to 50 posts to avoid token limits
-            # Reddit data mapping: 
-            # content -> Title + Selftext
-            # nickname -> Author
-            # liked_count -> Score
-            # comments_count -> Num Comments
+        for i, post in enumerate(posts[:50]): # 限制到50条帖子避免超过token限制
+            # 数据映射: 
+            # content -> 标题 + 内容
+            # liked_count -> 评分/点赞数
+            # comments_count -> 评论数
+            # 为保护隐私，不显示作者信息
             
-            formatted_text += f"Post {i+1}:\n"
-            formatted_text += f"Content: {post.content}\n"
-            formatted_text += f"Author: {post.nickname}\n"
-            formatted_text += f"Score: {post.liked_count}, Comments: {post.comments_count}\n"
+            formatted_text += f"帖子 {i+1}:\n"
+            formatted_text += f"内容: {post.content}\n"
+            formatted_text += f"互动数据: {post.liked_count}赞, {post.comments_count}评论\n"
             formatted_text += "-" * 20 + "\n"
             
         return formatted_text
