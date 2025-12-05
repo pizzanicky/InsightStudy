@@ -72,27 +72,43 @@ if generate_btn or (auto_run and keyword):
                         <style>
                             .cover-card-container {{
                                 display: flex;
-                                justify_content: center;
+                                justify-content: center;
                                 margin-bottom: 30px;
                             }}
                             .cover-card {{
-                                width: 360px;
-                                height: 640px; /* 9:16 aspect ratio */
-                                background-color: #0f172a;
-                                border-radius: 24px;
-                                padding: 40px 32px;
+                                width: 375px;
+                                height: 500px; /* 3:4 aspect ratio for social media */
+                                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                                border-radius: 20px;
+                                padding: 60px 32px 32px 32px; /* Increased top padding for safe zone */
                                 color: white;
                                 font-family: 'Inter', system-ui, sans-serif;
                                 box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-                                border: 1px solid #1e293b;
+                                border: 1px solid rgba(255, 255, 255, 0.08);
                                 display: flex;
                                 flex-direction: column;
                                 justify-content: space-between;
                                 position: relative;
                                 overflow: hidden;
                             }}
-                            /* Subtle gradient background effect */
+                            /* Subtle inner glow for framing */
                             .cover-card::before {{
+                                content: "";
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                right: 0;
+                                bottom: 0;
+                                border-radius: 20px;
+                                padding: 1px;
+                                background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%);
+                                -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+                                -webkit-mask-composite: xor;
+                                mask-composite: exclude;
+                                pointer-events: none;
+                            }}
+                            /* Soft radial glow effect */
+                            .cover-card::after {{
                                 content: "";
                                 position: absolute;
                                 top: -50%;
@@ -103,25 +119,24 @@ if generate_btn or (auto_run and keyword):
                                 pointer-events: none;
                             }}
                             .card-header {{
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: flex-start;
-                                margin-bottom: 20px;
-                                border-bottom: 2px solid #334155;
-                                padding-bottom: 20px;
+                                text-align: center;
+                                margin-bottom: 40px;
                                 z-index: 1;
                             }}
                             .ticker {{
-                                font-size: 36px;
+                                font-size: 48px;
                                 font-weight: 900;
-                                letter-spacing: 1px;
+                                letter-spacing: 2px;
                                 line-height: 1;
+                                margin-bottom: 12px;
+                                color: #ffffff;
                             }}
                             .date {{
-                                font-size: 14px;
+                                font-size: 13px;
                                 color: #94a3b8;
-                                margin-top: 6px;
-                                font-weight: 500;
+                                opacity: 0.6;
+                                font-weight: 400;
+                                letter-spacing: 1px;
                             }}
                             .card-body {{
                                 text-align: center;
@@ -140,44 +155,44 @@ if generate_btn or (auto_run and keyword):
                                 font-weight: 700;
                                 color: {badge_color};
                                 background-color: {badge_bg};
-                                margin-bottom: 32px;
+                                margin-bottom: 28px;
                                 border: 2px solid {badge_color};
                                 letter-spacing: 2px;
                             }}
                             .headline {{
-                                font-size: 28px;
+                                font-size: 24px;
                                 font-weight: 700;
-                                line-height: 1.5;
+                                line-height: 1.4;
                                 color: #f8fafc;
                                 max-width: 100%;
-                                text-wrap: balance; /* Modern CSS for balanced lines */
-                                margin-bottom: 20px;
+                                text-wrap: balance;
+                                margin-bottom: 16px;
                             }}
                             .card-footer {{
                                 display: flex;
                                 flex-wrap: wrap;
-                                gap: 12px;
+                                gap: 10px;
                                 justify-content: center;
-                                margin-bottom: 32px;
+                                margin-bottom: 24px;
                                 z-index: 1;
                             }}
                             .factor-tag {{
                                 background-color: rgba(30, 41, 59, 0.8);
                                 color: #e2e8f0;
-                                padding: 8px 16px;
+                                padding: 6px 14px;
                                 border-radius: 12px;
-                                font-size: 13px;
+                                font-size: 12px;
                                 border: 1px solid #475569;
                                 font-weight: 500;
                             }}
                             .brand-footer {{
                                 text-align: center;
-                                font-size: 11px;
+                                font-size: 10px;
                                 color: #64748b;
                                 text-transform: uppercase;
                                 letter-spacing: 3px;
-                                border-top: 1px solid #1e293b;
-                                padding-top: 24px;
+                                border-top: 1px solid rgba(255, 255, 255, 0.05);
+                                padding-top: 20px;
                                 z-index: 1;
                             }}
                             .container-wrapper {{
