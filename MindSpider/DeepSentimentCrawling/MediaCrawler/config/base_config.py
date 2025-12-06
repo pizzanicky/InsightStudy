@@ -10,7 +10,7 @@
 
 # 基础配置
 PLATFORM = "reddit"  # 平台，xhs | dy | ks | bili | wb | tieba | zhihu | reddit
-KEYWORDS = "IONQ"  # 关键词搜索配置，以英文逗号分隔
+KEYWORDS = "RBRK"  # 关键词搜索配置，以英文逗号分隔
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
 COOKIES = ""
 CRAWLER_TYPE = "search"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)
@@ -70,7 +70,7 @@ USER_DATA_DIR = "%s_user_data_dir"  # %s will be replaced by platform name
 START_PAGE = 1
 
 # 爬取视频/帖子的数量控制
-CRAWLER_MAX_NOTES_COUNT = 50
+CRAWLER_MAX_NOTES_COUNT = 100
 
 # 并发爬虫数量控制
 MAX_CONCURRENCY_NUM = 1

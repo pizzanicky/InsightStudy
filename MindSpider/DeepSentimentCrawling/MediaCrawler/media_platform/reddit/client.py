@@ -35,8 +35,8 @@ class RedditClient:
         """
         发送HTTP请求到Reddit JSON端点
         """
-        # 添加随机延迟（0.5-2秒），避免被识别为机器人
-        delay = random.uniform(0.5, 2.0)
+        # 添加随机延迟（2-4秒），避免被识别为机器人
+        delay = random.uniform(2.0, 4.0)
         await asyncio.sleep(delay)
         
         async with httpx.AsyncClient(
