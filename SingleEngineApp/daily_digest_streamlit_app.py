@@ -220,9 +220,20 @@ def render_digest_result(result, keyword):
         st.markdown("### 📝 Summary")
         st.markdown(result["summary"])
         
+        # 添加免责声明
+        st.markdown("---")
+        st.markdown(
+            "<p style='text-align: center; font-size: 12px; color: #94a3b8; opacity: 0.8; margin: 10px 0;'>"
+            "网络舆情信息，并非投资建议"
+            "</p>",
+            unsafe_allow_html=True
+        )
+        
         # Add copyable code block
         with st.expander("Copy Full Analysis"):
-            st.code(result["summary"], language="markdown")
+            # 在复制的文本中也包含免责声明
+            full_text = result["summary"] + "\n\n---\n\n网络舆情信息，并非投资建议"
+            st.code(full_text, language="markdown")
         
     with col2:
         st.markdown("### 🔥 热门讨论")
@@ -262,7 +273,72 @@ with st.sidebar:
     
     generate_btn = st.button("🚀 生成 Digest", type="primary", use_container_width=True)
 
-if generate_btn or (auto_run and keyword):
+    # 历史记录
+    st.markdown("---")
+    st.subheader("📚 历史记录")
+    
+    # 刷新历史列表按钮
+    if st.button("🔄 刷新列表", use_container_width=True):
+        st.rerun()
+    
+    # 获取历史记录列表
+    try:
+        from DailyDigest.models import get_digest_history_list
+        history_list = get_digest_history_list(limit=20)
+        
+        if history_list:
+            # 使用选择框显示历史
+            history_options = [
+                f"{h['created_at']} - {h['keyword']} ({h['sentiment_label']}, {h['post_count']}条)"
+                for h in history_list
+            ]
+            
+            selected_index = st.selectbox(
+                "选择历史记录",
+                range(len(history_options)),
+                format_func=lambda i: history_options[i],
+                key="history_selector"
+            )
+            
+            if st.button("📖 查看此记录", use_container_width=True):
+                st.session_state.view_history_id = history_list[selected_index]['id']
+                st.rerun()
+        else:
+            st.info("暂无历史记录")
+    except Exception as e:
+        st.error(f"加载历史记录失败: {e}")
+
+
+# 检查是否要查看历史记录
+if 'view_history_id' in st.session_state and st.session_state.view_history_id:
+    try:
+        from DailyDigest.models import get_digest_by_id
+        history_data = get_digest_by_id(st.session_state.view_history_id)
+        
+        if history_data:
+            st.info(f"📖 正在查看历史记录 - {history_data['keyword']} ({history_data['created_at']})")
+            
+            # 添加"返回新建"按钮
+            if st.button("🔙 返回新建"):
+                del st.session_state.view_history_id
+                st.rerun()
+            
+            # 转换为result格式并渲染
+            result = {
+                'success': True,
+                'summary': history_data['summary'],
+                'post_count': history_data['post_count'],
+                'cover_card': history_data['cover_card'],
+                'top_posts': history_data['top_posts']
+            }
+            render_digest_result(result, history_data['keyword'])
+        else:
+            st.error("未找到该历史记录")
+            del st.session_state.view_history_id
+    except Exception as e:
+        st.error(f"加载历史记录失败: {e}")
+        del st.session_state.view_history_id
+elif generate_btn or (auto_run and keyword):
     if not keyword:
         st.error("请输入关键词")
     else:

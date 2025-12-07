@@ -145,20 +145,43 @@ SAVE_DATA_OPTION = "postgresql"
                 timeout=120  # 2分钟超时
             )
             
+            # 记录爬虫输出以便调试
+            logger.info(f"[DailyDigest] Crawler STDOUT:\n{result.stdout}")
+            if result.stderr:
+                logger.warning(f"[DailyDigest] Crawler STDERR:\n{result.stderr}")
+            
             # 恢复原配置
             shutil.move(backup_path, original_config_path)
+
+            # 🚨 检查是否被 Reddit 拦截 (403 Forbidden)
+            combined_output = (result.stdout or "") + (result.stderr or "")
+            crawler_blocked = False
+            if "403" in combined_output and ("Block" in combined_output or "whoa there" in combined_output or "Reddit" in combined_output):
+                logger.error("[DailyDigest] Crawler detected 403 Forbidden/Blocked response.")
+                crawler_blocked = True
             
-            if result.returncode != 0:
-                logger.error(f"[DailyDigest] Crawler failed with code {result.returncode}")
-                logger.error(f"[DailyDigest] Stderr: {result.stderr}")
-                return False, f"爬取失败: {result.stderr[:200]}", 0
-            
+            # 简化逻辑：如果被拦截，或者爬虫失败，或者爬到了0条数据，都尝试使用 Tavily
             # Check how many posts were crawled
             posts = await self.get_recent_posts(keyword, hours=24)
             post_count = len(posts)
             
+            if crawler_blocked or result.returncode != 0 or post_count == 0:
+                logger.warning(f"[DailyDigest] Primary crawler failed or blocked (posts={post_count}). Attempting fallback to Tavily Search...")
+                
+                # Fallback to Tavily
+                tavily_success, tavily_msg, tavily_count = await self.crawl_reddit_via_tavily(keyword, max_count)
+                
+                if tavily_success and tavily_count > 0:
+                     return True, f"通过 Tavily 搜索成功获取 {tavily_count} 条数据 (原爬虫已失效)", tavily_count
+                
+                # 如果 Tavily 也失败，且之前是因为被拦截
+                if crawler_blocked:
+                    return False, "❌ 爬虫被 Reddit 拦截且 Tavily 搜索未找到补充数据。\n请检查 TAVILY_API_KEY 配置或更换节点。", 0
+                
+                if post_count == 0:
+                     return False, f"爬虫和搜索均未找到关于 '{keyword}' 的新数据", 0
+
             logger.info(f"[DailyDigest] Crawl completed. Found {post_count} posts for '{keyword}'")
-            
             return True, f"成功爬取 {post_count} 条帖子", post_count
             
         except subprocess.TimeoutExpired:
@@ -166,7 +189,85 @@ SAVE_DATA_OPTION = "postgresql"
             return False, "爬取超时（超过2分钟）", 0
         except Exception as e:
             logger.error(f"[DailyDigest] Crawl failed: {e}")
-            return False, f"爬取失败: {str(e)}", 0
+            return False, f"爬取异常: {str(e)}", 0
+
+    async def crawl_reddit_via_tavily(self, keyword: str, max_results: int = 20):
+        """
+        Fallback: Use Tavily API to search Reddit when crawler is blocked.
+        """
+        try:
+            from tavily import TavilyClient
+            api_key = os.getenv("TAVILY_API_KEY") or settings.TAVILY_API_KEY
+            
+            if not api_key:
+                logger.warning("TAVILY_API_KEY not found, skipping fallback.")
+                return False, "未配置 Tavily API Key", 0
+                
+            client = TavilyClient(api_key=api_key)
+            
+            logger.info(f"[DailyDigest] Searching Tavily for: site:reddit.com {keyword}")
+            response = client.search(
+                query=f'site:reddit.com "{keyword}"',
+                search_depth="advanced",
+                max_results=max_results,
+                include_raw_content=False
+            )
+            
+            results = response.get('results', [])
+            if not results:
+                logger.warning("Tavily returned no results.")
+                return False, "Tavily 未找到结果", 0
+            
+            logger.info(f"[DailyDigest] Tavily found {len(results)} results. Saving to DB...")
+            
+            saved_count = 0
+            async with get_session() as session:
+                for item in results:
+                    # 创建伪造的 WeiboNote (Reddit Post)
+                    url = item.get('url', '')
+                    content = item.get('content', '')
+                    title = item.get('title', '')
+                    
+                    # 简单的去重/ID生成逻辑
+                    import hashlib
+                    note_id_hash = int(hashlib.md5(url.encode()).hexdigest(), 16) % (10**16) # 生成一个大整数ID
+                    
+                    # 检查是否存在
+                    stmt = select(WeiboNote).where(WeiboNote.note_id == note_id_hash)
+                    existing = (await session.execute(stmt)).scalar_one_or_none()
+                    
+                    current_ts = int(datetime.now().timestamp() * 1000)
+                    
+                    if existing:
+                        existing.last_modify_ts = current_ts
+                        existing.source_keyword = keyword # 更新关键词关联
+                    else:
+                        new_note = WeiboNote(
+                            note_id=note_id_hash,
+                            note_url=url,
+                            content=f"{title}\n\n{content}", # 合并标题和摘要
+                            source_keyword=keyword,
+                            nickname="RedditUser (Via Tavily)",
+                            user_id="tavily_search",
+                            avatar="",
+                            liked_count="0",
+                            comments_count="0",
+                            shared_count="0",
+                            add_ts=current_ts,
+                            last_modify_ts=current_ts,
+                            create_time=current_ts,
+                            create_date_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        )
+                        session.add(new_note)
+                        saved_count += 1
+                
+                await session.commit()
+            
+            return True, "Success", saved_count
+
+        except Exception as e:
+            logger.error(f"[DailyDigest] Tavily fallback failed: {e}")
+            return False, str(e), 0
 
     async def get_recent_posts(self, keyword: str, hours: int = 24):
         """
@@ -195,6 +296,23 @@ SAVE_DATA_OPTION = "postgresql"
                 posts = result.scalars().all()
                 
                 logger.info(f"Found {len(posts)} posts for keyword '{keyword}' in the last {hours} hours")
+                
+                # 诊断逻辑：如果没找到帖子，检查是否有数据但关键词不匹配
+                if not posts:
+                    logger.info("No posts found matching keyword strictly. Running diagnostics...")
+                    
+                    # 1. 检查最近1小时是否有任何数据插入
+                    diag_stmt = select(WeiboNote).order_by(WeiboNote.add_ts.desc()).limit(5)
+                    diag_res = await session.execute(diag_stmt)
+                    recent_posts = diag_res.scalars().all()
+                    
+                    if recent_posts:
+                        logger.info(f"Diagnostics: Found {len(recent_posts)} recent posts in DB (ignoring keyword):")
+                        for p in recent_posts:
+                            logger.info(f" - ID: {p.note_id}, Keyword: '{p.source_keyword}', TS: {p.add_ts}, Time: {datetime.fromtimestamp(p.add_ts/1000)}")
+                    else:
+                        logger.warning("Diagnostics: DB is empty or no recent posts found at all. Crawler might have failed.")
+                
                 return posts
         except Exception as e:
             logger.exception(f"Error fetching posts: {e}")
@@ -314,7 +432,20 @@ def run_digest_generation(keyword: str, hours: int = 24):
     # because asyncio.run creates a new loop each time
     clear_engine_cache()
     digest = DailyDigest()
-    return asyncio.run(digest.generate_digest(keyword, hours))
+    result = asyncio.run(digest.generate_digest(keyword, hours))
+    
+    # 如果生成成功，保存到历史记录
+    if result.get('success'):
+        try:
+            from DailyDigest.models import save_digest_history
+            success, history_id = save_digest_history(keyword, result)
+            if success:
+                logger.info(f"Saved digest history with ID: {history_id}")
+                result['history_id'] = history_id
+        except Exception as e:
+            logger.warning(f"Failed to save history: {e}")
+    
+    return result
 
 def run_crawl_and_digest(keyword: str, hours: int = 24, max_count: int = 100):
     """
