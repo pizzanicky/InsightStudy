@@ -80,10 +80,11 @@ class RedditClient:
                 logger.error(f"[RedditClient] 请求失败: {e}")
                 raise
 
-    async def search(self, keyword: str, limit: int = 25) -> Dict:
+    async def search(self, keyword: str, limit: int = 100, after: str = None) -> dict:
         """
         在Reddit搜索关键词
         使用old.reddit.com端点，更稳定且不易被阻止
+        支持分页 (after)
         """
         # 使用old.reddit.com而不是www.reddit.com
         # old版本的JSON端点更稳定，较少触发403
@@ -97,7 +98,10 @@ class RedditClient:
             "t": "all"  # 时间范围：all (全部)
         }
         
-        logger.info(f"[RedditClient] 使用old.reddit.com端点搜索: {keyword}")
+        if after:
+            params['after'] = after
+            
+        logger.info(f"[RedditClient] 使用old.reddit.com端点搜索: {keyword} (after={after})")
         return await self.request("GET", url, params)
 
     async def get_comments(self, post_id: str) -> list:

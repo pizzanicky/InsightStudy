@@ -161,25 +161,30 @@ SAVE_DATA_OPTION = "postgresql"
                 crawler_blocked = True
             
             # 简化逻辑：如果被拦截，或者爬虫失败，或者爬到了0条数据，都尝试使用 Tavily
-            # Check how many posts were crawled
+            # Check how many posts were crawled (from DB)
             posts = await self.get_recent_posts(keyword, hours=24)
             post_count = len(posts)
             
-            if crawler_blocked or result.returncode != 0 or post_count == 0:
-                logger.warning(f"[DailyDigest] Primary crawler failed or blocked (posts={post_count}). Attempting fallback to Tavily Search...")
+            # 只有当没有爬到数据，且（被拦截 或 报错）时，才触发 Fallback
+            # 如果已经爬到了数据(post_count > 0)，即使有403警告(可能是部分资源失败)，也视为成功，直接使用
+            if post_count == 0 and (crawler_blocked or result.returncode != 0):
+                logger.warning(f"[DailyDigest] Primary crawler failed/blocked and NO posts found. Attempting fallback to Tavily Search...")
                 
                 # Fallback to Tavily
                 tavily_success, tavily_msg, tavily_count = await self.crawl_reddit_via_tavily(keyword, max_count)
                 
                 if tavily_success and tavily_count > 0:
-                     return True, f"通过 Tavily 搜索成功获取 {tavily_count} 条数据 (原爬虫已失效)", tavily_count
+                     return True, f"通过 Tavily 搜索成功获取 {tavily_count} 条数据 (原爬虫失效)", tavily_count
                 
-                # 如果 Tavily 也失败，且之前是因为被拦截
+                # 如果 Tavily 也失败
                 if crawler_blocked:
                     return False, "❌ 爬虫被 Reddit 拦截且 Tavily 搜索未找到补充数据。\n请检查 TAVILY_API_KEY 配置或更换节点。", 0
                 
-                if post_count == 0:
-                     return False, f"爬虫和搜索均未找到关于 '{keyword}' 的新数据", 0
+                return False, f"爬虫和搜索均未找到关于 '{keyword}' 的新数据", 0
+            
+            if post_count == 0:
+                 return False, f"爬虫执行完成，但未找到关于 '{keyword}' 的新帖子", 0
+
 
             logger.info(f"[DailyDigest] Crawl completed. Found {post_count} posts for '{keyword}'")
             return True, f"成功爬取 {post_count} 条帖子", post_count

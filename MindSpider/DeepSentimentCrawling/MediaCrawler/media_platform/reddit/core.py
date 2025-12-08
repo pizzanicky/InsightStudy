@@ -42,31 +42,60 @@ class RedditCrawler(AbstractCrawler):
 
     async def search(self):
         """
-        Search Reddit and map to WeiboNote
+        Search Reddit and map to WeiboNote with pagination
         """
         keyword = source_keyword_var.get()
-        utils.logger.info(f"[RedditCrawler] Starting search for keyword: {keyword}")
+        target_count = config.CRAWLER_MAX_NOTES_COUNT
+        utils.logger.info(f"[RedditCrawler] Starting search for keyword: {keyword}, target: {target_count}")
 
         try:
-            # Fetch data from Reddit
-            search_data = await self.client.search(keyword, limit=config.CRAWLER_MAX_NOTES_COUNT)
+            total_crawled = 0
+            after_cursor = None
             
-            if not search_data:
-                utils.logger.error(f"[RedditCrawler] Search returned empty response for keyword: {keyword}")
-                return
+            while total_crawled < target_count:
+                # Calculate remaining needed, capped at 100 (API limit)
+                limit = min(target_count - total_crawled, 100)
+                
+                # Fetch data from Reddit
+                search_data = await self.client.search(keyword, limit=limit, after=after_cursor)
+                
+                if not search_data:
+                    utils.logger.error(f"[RedditCrawler] Search returned empty response for keyword: {keyword}")
+                    break
 
-            if 'data' not in search_data or 'children' not in search_data['data']:
-                utils.logger.error(f"[RedditCrawler] Invalid response structure. Keys found: {search_data.keys()}")
-                if 'error' in search_data:
-                    utils.logger.error(f"[RedditCrawler] Reddit Error: {search_data['error']}")
-                return
+                if 'data' not in search_data or 'children' not in search_data['data']:
+                    utils.logger.error(f"[RedditCrawler] Invalid response structure. Keys found: {search_data.keys()}")
+                    if 'error' in search_data:
+                        utils.logger.error(f"[RedditCrawler] Reddit Error: {search_data['error']}")
+                    break
 
-            posts = search_data['data']['children']
-            utils.logger.info(f"[RedditCrawler] Found {len(posts)} posts for keyword: {keyword}")
+                posts = search_data['data']['children']
+                if not posts:
+                    utils.logger.info(f"[RedditCrawler] No more posts found for keyword: {keyword}")
+                    break
+                    
+                utils.logger.info(f"[RedditCrawler] Found {len(posts)} posts in this batch (Target: {target_count})")
 
-            for post in posts:
-                post_data = post['data']
-                await self._process_post(post_data, keyword)
+                for post in posts:
+                    post_data = post['data']
+                    await self._process_post(post_data, keyword)
+                    total_crawled += 1
+                    
+                    if total_crawled >= target_count:
+                        break
+                
+                # Get next page cursor
+                after_cursor = search_data['data'].get('after')
+                if not after_cursor:
+                    utils.logger.info("[RedditCrawler] No 'after' cursor, pagination finished.")
+                    break
+                    
+                utils.logger.info(f"[RedditCrawler] Moving to next page. Cursor: {after_cursor}, Total: {total_crawled}")
+                
+                # Simple delay to be nice to the API
+                await asyncio.sleep(1)
+
+            utils.logger.info(f"[RedditCrawler] Search completed. Total processed: {total_crawled}")
 
         except Exception as e:
             utils.logger.error(f"[RedditCrawler] Search failed: {e}")

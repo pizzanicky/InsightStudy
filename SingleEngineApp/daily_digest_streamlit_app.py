@@ -51,12 +51,12 @@ def render_digest_result(result, keyword):
             .cover-card {{
                 width: 375px;
                 height: 500px;
-                background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+                background: linear-gradient(145deg, #1e293b, #0f172a);
                 border-radius: 20px;
-                padding: 60px 32px 32px 32px;
+                padding: 40px 30px 60px 30px;
                 color: white;
                 font-family: 'Inter', system-ui, sans-serif;
-                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
                 border: 1px solid rgba(255, 255, 255, 0.08);
                 display: flex;
                 flex-direction: column;
@@ -203,7 +203,7 @@ def render_digest_result(result, keyword):
                     {''.join([f'<span class="factor-tag">{f}</span>' for f in card.get('key_factors', [])])}
                 </div>
                 <div class="disclaimer">
-                    网络舆情信息，并非投资建议
+                    基于网络公开信息汇总，不构成任何投资建议
                 </div>
                 <div class="brand-footer">
                     WGD Insight | Sentiment Data
@@ -224,7 +224,7 @@ def render_digest_result(result, keyword):
         st.markdown("---")
         st.markdown(
             "<p style='text-align: center; font-size: 12px; color: #94a3b8; opacity: 0.8; margin: 10px 0;'>"
-            "网络舆情信息，并非投资建议"
+            "基于网络公开信息汇总，不构成任何投资建议"
             "</p>",
             unsafe_allow_html=True
         )
@@ -232,7 +232,7 @@ def render_digest_result(result, keyword):
         # Add copyable code block
         with st.expander("Copy Full Analysis"):
             # 在复制的文本中也包含免责声明
-            full_text = result["summary"] + "\n\n---\n\n网络舆情信息，并非投资建议"
+            full_text = result["summary"] + "\n\n---\n\n基于网络公开信息汇总，不构成任何投资建议"
             st.code(full_text, language="markdown")
         
     with col2:

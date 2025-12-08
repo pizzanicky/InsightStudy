@@ -14,10 +14,12 @@ DAILY_DIGEST_PROMPT = """
 
 **输出要求：**
 
-1.  **整体情绪**：（看涨/看跌/中性）并简要说明原因（1-2 句话）。
+1.  **整体情绪**：（积极/消极/中性）并简要说明原因（1-2 句话）。
 2.  **关键话题**：列出 3-5 个主要讨论的话题或主题。
 3.  **总结**：简明扼要地总结整体讨论，突出任何重大新闻、传闻或社区反应。
 4.  **热门帖子亮点**：简要提及 1-3 个最重要的帖子（如果有）。
+5.  **开头免责声明**：本内容基于网络公开信息汇总，不构成任何投资建议。
+6.  **用词避免触发小红书审核**：避免使用购买建议、投资建议类用词。
 
 **格式：**
 
@@ -42,7 +44,7 @@ Finally, output a JSON object (and ONLY the JSON) at the very end of your respon
 
 *   `ticker`: The stock symbol (e.g., IONQ).
 *   `sentiment_score`: A number 0-10 (0 bearish, 10 bullish).
-*   `sentiment_label`: A 2-character Chinese word (e.g., 极热, 看涨, 观望, 分歧, 恐慌).
+*   `sentiment_label`: A 2-character Chinese word. Avoid using financial investment terms(e.g., "看涨" or "看跌").
 *   `headline`: A professional, insight-driven headline (Max 15 chars, e.g., '量子算力变现能力的验证期').
 *   `key_factors`: A list of 3 short phrases (Max 6 chars each) driving this sentiment (e.g., ["财报超预期", "空头回补", "AI叙事"]).
 
