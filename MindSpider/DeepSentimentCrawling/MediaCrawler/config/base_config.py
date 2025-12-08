@@ -10,7 +10,13 @@
 
 # 基础配置
 PLATFORM = "reddit"  # 平台，xhs | dy | ks | bili | wb | tieba | zhihu | reddit
-KEYWORDS = "RKLB"  # 关键词搜索配置，以英文逗号分隔
+KEYWORDS = "ASTS"  # 关键词搜索配置，以英文逗号分隔
+# 指定爬取的Subreddits (板块)，用于过滤噪音。如果为空则搜索全站。
+REDDIT_SUBREDDITS = [
+    "stocks", "investing", "SecurityAnalysis", "Daytrading", "wallstreetbets", "StockMarket", "options", 
+    "traders", "pennystocks", "Dividends", "financialindependence", "Economy", "GlobalMarkets", "UndervaluedStonks",
+    "thetagang", "trading", "Superstonk", "Bogleheads", "personalfinance", "Fire"
+]
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
 COOKIES = ""
 CRAWLER_TYPE = "search"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)

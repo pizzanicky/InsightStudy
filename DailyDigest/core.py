@@ -288,14 +288,14 @@ SAVE_DATA_OPTION = "postgresql"
                     return []
 
                 # Query WeiboNote (which stores Reddit data)
-                # Filter by source_keyword and add_ts (crawled time) or create_time (post time)
-                # Using add_ts is safer for "recently crawled"
+                # Strict Filtering: Only include posts created within the time window
+                # We use create_time (post publish time) instead of add_ts (crawl time) for accuracy
                 stmt = select(WeiboNote).where(
                     and_(
                         WeiboNote.source_keyword == keyword,
-                        WeiboNote.add_ts >= time_threshold
+                        WeiboNote.create_time >= time_threshold
                     )
-                ).order_by(WeiboNote.add_ts.desc())
+                ).order_by(WeiboNote.create_time.desc())
                 
                 result = await session.execute(stmt)
                 posts = result.scalars().all()

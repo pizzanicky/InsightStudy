@@ -80,28 +80,38 @@ class RedditClient:
                 logger.error(f"[RedditClient] 请求失败: {e}")
                 raise
 
-    async def search(self, keyword: str, limit: int = 100, after: str = None) -> dict:
+    async def search(self, keyword: str, limit: int = 100, after: str = None, subreddits: list = None) -> dict:
         """
         在Reddit搜索关键词
         使用old.reddit.com端点，更稳定且不易被阻止
         支持分页 (after)
+        支持限定板块 (subreddits) -> 使用 r/sub1+sub2/search 路径
         """
-        # 使用old.reddit.com而不是www.reddit.com
-        # old版本的JSON端点更稳定，较少触发403
+        # 默认搜索全站
         url = "https://old.reddit.com/search.json"
         
+        # 如果指定了板块，则构建限定范围的搜索URL
+        # 格式: https://old.reddit.com/r/sub1+sub2+sub3/search.json
+        if subreddits and len(subreddits) > 0:
+            # 限制URL长度，虽然大多数浏览器支持很长的URL，但为了保险起见，或者Reddit可能有已知的限制
+            # 但通常几十个subreddit是用 + 连接没问题的
+            joined_subs = "+".join(subreddits)
+            url = f"https://old.reddit.com/r/{joined_subs}/search.json"
+            # 此时 q 参数只需要关键词，不需要再写 subreddit:xxx
+            
         params = {
             "q": keyword,
             "limit": limit,
             "sort": "new",
             "type": "link",  # 只搜索帖子，不包括子版块或用户
-            "t": "all"  # 时间范围：all (全部)
+            "t": "all",  # 时间范围：all (全部)
+            "restrict_sr": "on" if subreddits else "off" # 如果指定了板块，限制在该范围内
         }
         
         if after:
             params['after'] = after
             
-        logger.info(f"[RedditClient] 使用old.reddit.com端点搜索: {keyword} (after={after})")
+        logger.info(f"[RedditClient] 搜索URL: {url} | Keyword: {keyword} | Subs: {len(subreddits) if subreddits else 0}")
         return await self.request("GET", url, params)
 
     async def get_comments(self, post_id: str) -> list:

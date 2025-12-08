@@ -46,6 +46,15 @@ class RedditCrawler(AbstractCrawler):
         """
         keyword = source_keyword_var.get()
         target_count = config.CRAWLER_MAX_NOTES_COUNT
+        
+        # 准备板块列表
+        subreddits = []
+        if hasattr(config, 'REDDIT_SUBREDDITS') and config.REDDIT_SUBREDDITS:
+            subreddits = config.REDDIT_SUBREDDITS
+            utils.logger.info(f"[RedditCrawler] Applied subreddit filter: {len(subreddits)} subreddits")
+        else:
+            utils.logger.warning("[RedditCrawler] REDDIT_SUBREDDITS config NOT found or empty.")
+
         utils.logger.info(f"[RedditCrawler] Starting search for keyword: {keyword}, target: {target_count}")
 
         try:
@@ -57,7 +66,8 @@ class RedditCrawler(AbstractCrawler):
                 limit = min(target_count - total_crawled, 100)
                 
                 # Fetch data from Reddit
-                search_data = await self.client.search(keyword, limit=limit, after=after_cursor)
+                # Pass subreddits list directly to use URL-based filtering (r/sub1+sub2/...)
+                search_data = await self.client.search(keyword, limit=limit, after=after_cursor, subreddits=subreddits)
                 
                 if not search_data:
                     utils.logger.error(f"[RedditCrawler] Search returned empty response for keyword: {keyword}")

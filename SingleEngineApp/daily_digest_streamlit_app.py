@@ -309,6 +309,7 @@ with st.sidebar:
         st.error(f"加载历史记录失败: {e}")
 
 
+
 # 检查是否要查看历史记录
 if 'view_history_id' in st.session_state and st.session_state.view_history_id:
     try:
