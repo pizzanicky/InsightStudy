@@ -49,29 +49,25 @@ def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: 
         
     try:
         # 2. Convert Markdown to HTML
-        # Pre-process markdown to fix common LLM formatting issues
-        # 1. Clean up potential residual code blocks at the very end (just in case)
+        # Strip JSON Block (Existing)
+        summary_md = re.sub(r'```json.*$', '', summary_md, flags=re.DOTALL | re.IGNORECASE)
         summary_md = re.sub(r'```\s*$', '', summary_md.strip())
-        
-        # 2. Fix inline lists: "Text * Item" -> "Text\n\n* Item"
-        # Aggressive fix: ANY space-asterisk-space sequence becomes a newline-bullet
-        # We replace " * " with "\n\n* "
-        summary_md = summary_md.replace(" * ", "\n\n* ")
-        
-        # Also handle cases where there might be a colon immediately before the asterisk without space
-        # e.g. "Topic:* Item"
-        summary_md = re.sub(r'([：:])\s*\*\s*', r'\1\n\n* ', summary_md)
-        
-        # Ensure we didn't break bold formatting like "**Bold**" (which became "* *Bold**")
-        # If we accidentally created "* *", revert it back to " **" (space bold)
-        summary_md = summary_md.replace("\n\n* *", " **")
-        
-        # Fix specific pattern seen in user screenshot: "关键话题： * WBD"
-        # The previous replace(" * ") handles the spaces, but let's ensure predecessors
-        pass
-        
+
+        # 1. Fix Lists: Convert lines starting with "* " to "- " (Standard Markdown list)
+        # This fixes the issue where lists aren't rendering as HTML <ul>
+        summary_md = re.sub(r'^\s*\*\s+', '- ', summary_md, flags=re.MULTILINE)
+
+        # 2. Fix broken Bold: Remove stray asterisks at the end of lines/sentences if they don't have a pair
+        # Example: "Title**:" -> "Title:" (It's cleaner to just remove broken bolds than try to close them)
+        summary_md = re.sub(r'([^\*])\*\*:', r'\1:', summary_md) # Fix "Word**:" -> "Word:"
+        summary_md = re.sub(r'([^\*])\*:', r'\1:', summary_md)   # Fix "Word*:" -> "Word:"
+
+        # 3. Standardize Bold Spacing
+        summary_md = re.sub(r'\*\*\s+(.*?)\s+\*\*', r'**\1**', summary_md)
+
         if markdown:
-            html_content = markdown.markdown(summary_md, extensions=['tables', 'fenced_code'])
+            # 4. Convert to HTML
+            html_content = markdown.markdown(summary_md, extensions=['extra', 'nl2br'])
         else:
             logger.warning("Markdown library not found. Using simple fallback for email HTML.")
             # Simple Fallback:
@@ -213,6 +209,7 @@ def _create_email_html(content_html: str, card: dict, ticker: str, date_str: str
         <style>
             body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }}
             h1, h2, h3 {{ color: #1e293b; }}
+            strong, b {{ font-weight: bold; color: #333; }}
             a {{ color: #2563eb; text-decoration: none; }}
             code {{ background: #f1f5f9; padding: 2px 5px; border-radius: 4px; font-family: monospace; }}
             pre {{ background: #f1f5f9; padding: 15px; border-radius: 8px; overflow-x: auto; }}
