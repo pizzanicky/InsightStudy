@@ -38,8 +38,9 @@ def render_digest_result(result, keyword):
             badge_bg = "rgba(245, 158, 11, 0.2)"
             
         # Format date
-        from datetime import datetime
-        date_str = datetime.now().strftime("%Y-%m-%d")
+        # Use date from result if available, otherwise STRICTLY require it (no fallback to now for history correctness)
+        raw_date_str = str(result.get('date') or "Unknown Date")
+        date_str = raw_date_str.split(" ")[0]
         
         # Generate HTML for the card
         html_card = f"""
@@ -262,8 +263,10 @@ def render_digest_result(result, keyword):
             else:
                 with st.spinner("Sending email..."):
                     # Prepare data
-                    from datetime import datetime
-                    date_str = datetime.now().strftime("%Y-%m-%d")
+                    # Prepare data
+                    # Ensure date_str is only date, no time
+                    raw_date = str(result.get("date", "Unknown Date"))
+                    date_str = raw_date.split(" ")[0]
                     subject = f"WGD每日摘要：{result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
                     
                     # Call backend
@@ -272,7 +275,8 @@ def render_digest_result(result, keyword):
                         subject=subject,
                         summary_md=result["summary"],
                         cover_card=result.get("cover_card"),
-                        ticker=keyword
+                        ticker=keyword,
+                        date_str=date_str
                     )
                     
                     if success_result["success"]:
@@ -367,7 +371,8 @@ if 'view_history_id' in st.session_state and st.session_state.view_history_id:
                 'summary': history_data['summary'],
                 'post_count': history_data['post_count'],
                 'cover_card': history_data['cover_card'],
-                'top_posts': history_data['top_posts']
+                'top_posts': history_data['top_posts'],
+                'date': history_data['created_at'] # Pass history date
             }
             render_digest_result(result, history_data['keyword'])
         else:

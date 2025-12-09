@@ -412,6 +412,7 @@ SAVE_DATA_OPTION = "postgresql"
 
             return {
                 "success": True,
+                "date": datetime.now().strftime("%Y-%m-%d"),
                 "summary": summary,
                 "cover_card": cover_card_data,
                 "post_count": len(posts),

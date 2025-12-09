@@ -20,7 +20,7 @@ except ImportError:
 # Load environment variables
 load_dotenv()
 
-def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: dict = None, ticker: str = "") -> dict:
+def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: dict = None, ticker: str = "", date_str: str = None) -> dict:
     """
     Send the Daily Digest report via email.
     
@@ -30,6 +30,7 @@ def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: 
         summary_md (str): The markdown content of the summary.
         cover_card (dict, optional): Data for the cover card (sentiment, score, etc.).
         ticker (str, optional): The ticker symbol.
+        date_str (str, optional): The date of the report. Defaults to current date if None.
         
     Returns:
         dict: {"success": bool, "message": str}
@@ -92,7 +93,7 @@ def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: 
                     html_content += f"<p>{line}</p>"
         
         # 3. Create HTML Body
-        full_html = _create_email_html(html_content, cover_card, ticker)
+        full_html = _create_email_html(html_content, cover_card, ticker, date_str)
         
         # 4. Create Message
         msg = MIMEMultipart("alternative")
@@ -140,11 +141,16 @@ def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: 
         logger.error(f"Failed to send email: {e}")
         return {"success": False, "message": f"Failed to send email: {str(e)}"}
 
-def _create_email_html(content_html: str, card: dict, ticker: str) -> str:
+def _create_email_html(content_html: str, card: dict, ticker: str, date_str: str = None) -> str:
     """Helper to construct the full HTML email."""
     
     # Default values
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    else:
+        # Ensure it's just the date part (defensive)
+        date_str = str(date_str).split(' ')[0]
+    
     ticker = ticker or card.get('ticker', 'N/A') if card else 'Report'
     
     # Card Logic
