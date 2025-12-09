@@ -384,16 +384,29 @@ SAVE_DATA_OPTION = "postgresql"
             cover_card_data = {}
             
             try:
-                # Find the last JSON object
-                # We look for the last '{' which likely starts the JSON
-                last_brace_idx = response_text.rfind('{')
-                if last_brace_idx != -1:
-                    json_text = response_text[last_brace_idx:]
-                    # Remove any trailing markdown code block markers
-                    json_text = re.sub(r'```\s*$', '', json_text).strip()
-                    
-                    cover_card_data = json.loads(json_text)
-                    summary = response_text[:last_brace_idx].strip()
+                # Robust extraction: Split by the start of the JSON code block
+                if "```json" in response_text:
+                    parts = response_text.split("```json")
+                    summary = parts[0].strip()
+                    json_text = parts[-1].split("```")[0].strip() # Take content between ```json and next ```
+                    try:
+                        cover_card_data = json.loads(json_text)
+                    except:
+                         # Fallback if json is malformed, try finding brace
+                         match = re.search(r'(\{.*\})', json_text, re.DOTALL)
+                         if match:
+                             cover_card_data = json.loads(match.group(1))
+                else:
+                    # Fallback logic if no code block found
+                    last_brace_idx = response_text.rfind('{')
+                    if last_brace_idx != -1:
+                        json_text = response_text[last_brace_idx:]
+                        if json_text.strip().endswith("}"):
+                             try:
+                                 cover_card_data = json.loads(json_text)
+                                 summary = response_text[:last_brace_idx].strip()
+                             except:
+                                 pass
             except Exception as e:
                 logger.warning(f"Failed to parse cover card JSON: {e}")
 

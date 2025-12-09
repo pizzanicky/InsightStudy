@@ -9,6 +9,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 from DailyDigest.core import run_digest_generation, run_crawl
+from DailyDigest.email_service import send_report_email
 
 st.set_page_config(page_title="Daily Digest", page_icon="📰", layout="wide")
 
@@ -240,8 +241,44 @@ def render_digest_result(result, keyword):
         for post in result["top_posts"]:
             with st.expander(f"热度: {post['score']} | 💬 {post['comments']}"):
                 st.write(post['content'])
-                if post.get('url'):
-                    st.markdown(f"[View on Reddit]({post['url']})")
+
+    
+    # --- Email Report Section ---
+    st.divider()
+    st.subheader("📧 Send Report via Email")
+    
+    with st.expander("Email this report", expanded=True):
+        email_col1, email_col2 = st.columns([3, 1])
+        with email_col1:
+            recipient_email = st.text_input("Recipient Email", placeholder="your_email@example.com")
+        with email_col2:
+            st.write("") # Spacer
+            st.write("") # Spacer
+            send_email_btn = st.button("Send Email", type="primary", use_container_width=True)
+            
+        if send_email_btn:
+            if not recipient_email or "@" not in recipient_email:
+                st.error("Please enter a valid email address.")
+            else:
+                with st.spinner("Sending email..."):
+                    # Prepare data
+                    from datetime import datetime
+                    date_str = datetime.now().strftime("%Y-%m-%d")
+                    subject = f"WGD每日摘要：{result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
+                    
+                    # Call backend
+                    success_result = send_report_email(
+                        to_email=recipient_email,
+                        subject=subject,
+                        summary_md=result["summary"],
+                        cover_card=result.get("cover_card"),
+                        ticker=keyword
+                    )
+                    
+                    if success_result["success"]:
+                        st.success("✅ Email sent successfully!")
+                    else:
+                        st.error(f"❌ {success_result['message']}")
 
 # Sidebar configuration
 with st.sidebar:
