@@ -64,6 +64,25 @@ def send_report_email(to_email: str, subject: str, summary_md: str, cover_card: 
 
         # 3. Standardize Bold Spacing
         summary_md = re.sub(r'\*\*\s+(.*?)\s+\*\*', r'**\1**', summary_md)
+        
+        # 4. Enforce Newline before Highlights (User feedback fix)
+        # Ensure there is a double newline before "**亮点：**" to separate it from the previous paragraph
+        summary_md = re.sub(r'([^\n])\s*\*\*(亮点|Highlights)[：:]\*\*', r'\1\n\n**\2：**', summary_md)
+        summary_md = re.sub(r'(\n)\s*\*\*(亮点|Highlights)[：:]\*\*', r'\n\n**\2：**', summary_md)
+        
+        # 5. Remove Citations from Email (User Request)
+        # Remove the reference marks in text like [^1], [^2]
+        summary_md = re.sub(r'\[\^\d+\]', '', summary_md)
+        
+        # Remove the entire Reference section at the bottom
+        # Pattern: **参考文献：** (or similar) followed by the rest of the text
+        # We look for the header and remove everything after it
+        summary_md = re.sub(r'(?i)\*\*参考文献[：:]\*\*.*$', '', summary_md, flags=re.DOTALL)
+        # Also handle potential English header just in case
+        summary_md = re.sub(r'(?i)\*\*References[：:]\*\*.*$', '', summary_md, flags=re.DOTALL)
+        
+        # Clean up any trailing whitespace left
+        summary_md = summary_md.strip()
 
         if markdown:
             # 4. Convert to HTML
