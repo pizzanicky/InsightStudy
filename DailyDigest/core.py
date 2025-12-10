@@ -210,12 +210,12 @@ SAVE_DATA_OPTION = "postgresql"
                 
             client = TavilyClient(api_key=api_key)
             
-            logger.info(f"[DailyDigest] Searching Tavily for: site:reddit.com {keyword}")
             response = client.search(
                 query=f'site:reddit.com "{keyword}"',
                 search_depth="advanced",
                 max_results=max_results,
-                include_raw_content=False
+                include_raw_content=False,
+                days=3 # RESTRICT to last 3 days to avoid old posts.
             )
             
             results = response.get('results', [])
@@ -223,7 +223,7 @@ SAVE_DATA_OPTION = "postgresql"
                 logger.warning("Tavily returned no results.")
                 return False, "Tavily 未找到结果", 0
             
-            logger.info(f"[DailyDigest] Tavily found {len(results)} results. Saving to DB...")
+            logger.info(f"[DailyDigest] Tavily found {len(results)} results (Last 3 days). Saving to DB...")
             
             saved_count = 0
             async with get_session() as session:
@@ -243,9 +243,20 @@ SAVE_DATA_OPTION = "postgresql"
                     
                     current_ts = int(datetime.now().timestamp() * 1000)
                     
+                    # Try to parse real publish date from Tavily
+                    pub_date_str = item.get('published_date')
+                    real_create_time = current_ts # Default to NOW because we filtered by `days=3`
+                    
+                    if pub_date_str:
+                        try:
+                            dt = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
+                            real_create_time = int(dt.timestamp() * 1000)
+                        except:
+                            pass
+                    
                     if existing:
                         existing.last_modify_ts = current_ts
-                        existing.source_keyword = keyword # 更新关键词关联
+                        existing.source_keyword = keyword
                     else:
                         new_note = WeiboNote(
                             note_id=note_id_hash,
@@ -260,8 +271,8 @@ SAVE_DATA_OPTION = "postgresql"
                             shared_count="0",
                             add_ts=current_ts,
                             last_modify_ts=current_ts,
-                            create_time=current_ts,
-                            create_date_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            create_time=real_create_time, 
+                            create_date_time=datetime.fromtimestamp(real_create_time/1000).strftime("%Y-%m-%d %H:%M:%S")
                         )
                         session.add(new_note)
                         saved_count += 1
