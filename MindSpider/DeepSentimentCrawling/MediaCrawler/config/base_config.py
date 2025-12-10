@@ -15,7 +15,8 @@ KEYWORDS = "ASTS"  # 关键词搜索配置，以英文逗号分隔
 REDDIT_SUBREDDITS = [
     "stocks", "investing", "SecurityAnalysis", "Daytrading", "wallstreetbets", "StockMarket", "options", 
     "traders", "pennystocks", "Dividends", "financialindependence", "Economy", "GlobalMarkets", "UndervaluedStonks",
-    "thetagang", "trading", "Superstonk", "Bogleheads", "personalfinance", "Fire"
+    "thetagang", "trading", "Superstonk", "Bogleheads", "personalfinance", "Fire", "TheRaceTo10Million",
+    "smallstreetbets", "XGramatikInsights", "technology", "FluentInFinance", "Stocktradingalerts"
 ]
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
 COOKIES = ""
