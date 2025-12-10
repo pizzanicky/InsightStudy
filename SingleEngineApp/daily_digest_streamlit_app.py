@@ -381,7 +381,8 @@ if 'view_history_id' in st.session_state and st.session_state.view_history_id:
     except Exception as e:
         st.error(f"加载历史记录失败: {e}")
         del st.session_state.view_history_id
-elif generate_btn or (auto_run and keyword):
+# Handle "Generate" Action (State Update)
+if generate_btn or (auto_run and keyword):
     if not keyword:
         st.error("请输入关键词")
     else:
@@ -408,24 +409,20 @@ elif generate_btn or (auto_run and keyword):
                         # 检查摘要生成结果
                         if digest_result["success"]:
                             status.update(label="✅ 处理完成！", state="complete", expanded=False)
-                            result = digest_result
+                            # Store in session state
+                            st.session_state['current_result'] = digest_result
+                            st.session_state['current_keyword'] = keyword
                         else:
                             status.update(label="⚠️ 摘要生成失败", state="error")
                             st.error(digest_result["message"])
-                            result = None
                     else:
                         status.update(label="❌ 爬取失败", state="error")
                         st.error(crawl_message)
-                        result = None
                         
                 except Exception as e:
                     status.update(label="❌ 处理失败", state="error")
                     st.error(f"发生错误: {str(e)}")
-                    result = None
             
-            # 显示结果
-            if result and result["success"]:
-                render_digest_result(result, keyword)
         else:
             # 仅生成摘要（使用已有数据）
             with st.spinner(f"正在分析 '{keyword}' 的情绪..."):
@@ -433,8 +430,9 @@ elif generate_btn or (auto_run and keyword):
                     result = run_digest_generation(keyword, hours)
                     
                     if result["success"]:
-                        render_digest_result(result, keyword)
-                        
+                        # Store in session state
+                        st.session_state['current_result'] = result
+                        st.session_state['current_keyword'] = keyword
                     else:
                         st.warning(result["message"])
                         if "No posts found" in result["message"]:
@@ -442,6 +440,21 @@ elif generate_btn or (auto_run and keyword):
                             
                 except Exception as e:
                     st.error(f"发生错误: {str(e)}")
+
+# Remove view_history logic here because it's handled above or we check state priority
+# Render Logic: Decide what to show
+# Priority: 1. Viewing History ID, 2. Current Generated Result, 3. Default Info
+
+if 'view_history_id' in st.session_state and st.session_state.view_history_id:
+    # Logic for history view is already handled in the previous block (lines 355-383)
+    # But wait, looking at the code structure, the previous block was `if ... elif ... else`.
+    # We need to ensure we don't double render.
+    # The simplest way is to let the 'view_history_id' block handle itself (it halts execution or renders).
+    # IF 'view_history_id' is NOT present, THEN we check for 'current_result'.
+    pass 
+
+elif 'current_result' in st.session_state:
+    render_digest_result(st.session_state['current_result'], st.session_state['current_keyword'])
 
 else:
     st.info("👈 在侧边栏输入关键词并点击'生成 Digest'开始")
