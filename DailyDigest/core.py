@@ -340,6 +340,7 @@ SAVE_DATA_OPTION = "postgresql"
             # 为保护隐私，不显示作者信息
             
             formatted_text += f"帖子 {i+1}:\n"
+            formatted_text += f"链接: {post.note_url}\n"
             formatted_text += f"内容: {post.content}\n"
             formatted_text += f"互动数据: {post.liked_count}赞, {post.comments_count}评论\n"
             formatted_text += "-" * 20 + "\n"
