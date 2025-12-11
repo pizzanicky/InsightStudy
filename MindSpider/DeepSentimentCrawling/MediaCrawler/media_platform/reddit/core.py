@@ -169,9 +169,75 @@ class RedditCrawler(AbstractCrawler):
             # Save to DB
             utils.logger.info(f"[RedditCrawler] Saving post {reddit_id_str} (mapped ID: {note_id})")
             await self._save_note(note)
-
+            
+            # 5. Fetch Comments (if enabled)
+            if config.ENABLE_GET_COMMENTS:
+                await self._process_comments(reddit_id_str, note_id)
+            
         except Exception as e:
             utils.logger.error(f"[RedditCrawler] Error processing post: {e}")
+
+    async def _process_comments(self, reddit_post_id: str, db_note_id: int):
+        """
+        Fetch and process comments for a post
+        """
+        try:
+            # 1. Fetch from API
+            # Reddit API returns [post_listing, comment_listing]
+            response = await self.client.get_comments(reddit_post_id)
+            
+            if not response or len(response) < 2:
+                return
+            
+            comment_listing = response[1]
+            comments_data = comment_listing.get('data', {}).get('children', [])
+            
+            # 2. Limit count
+            max_comments = config.CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES
+            comments_data = comments_data[:max_comments]
+            
+            db_comments = []
+            for comment_item in comments_data:
+                data = comment_item.get('data')
+                if not data or data.get('kind') == 'more': # 'more' is pagination token
+                    continue
+                    
+                # ID Conversion
+                c_id_str = data.get('id', '')
+                if not c_id_str:
+                    continue
+                try:
+                    c_id_int = int(c_id_str, 36)
+                except:
+                    continue
+                    
+                # Time
+                create_time = int(data.get('created_utc', 0) * 1000)
+                
+                # Create Model
+                comm = WeiboNoteComment()
+                comm.comment_id = c_id_int
+                comm.note_id = db_note_id
+                comm.content = data.get('body', '')
+                comm.user_id = data.get('author', 'unknown')
+                comm.nickname = data.get('author', 'unknown')
+                comm.avatar = ""
+                comm.comment_like_count = str(data.get('ups', 0))
+                comm.sub_comment_count = "0" # Not fetching children for now
+                comm.parent_comment_id = "" # Top level
+                comm.create_time = create_time
+                comm.create_date_time = datetime.fromtimestamp(data.get('created_utc', 0)).strftime('%Y-%m-%d %H:%M:%S')
+                
+                db_comments.append(comm)
+            
+            # 3. Save
+            if db_comments:
+                from media_platform.reddit.store import batch_update_reddit_comments
+                utils.logger.info(f"[RedditCrawler] Saving {len(db_comments)} comments for post {reddit_post_id}")
+                await batch_update_reddit_comments(db_comments)
+                
+        except Exception as e:
+            utils.logger.error(f"[RedditCrawler] Error processing comments for {reddit_post_id}: {e}")
 
     async def _save_note(self, note: WeiboNote):
         """
