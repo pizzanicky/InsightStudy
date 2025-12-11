@@ -165,6 +165,7 @@ class RedditCrawler(AbstractCrawler):
             
             # Extra fields
             note.ip_location = ""
+            note.platform = "reddit"
             
             # Save to DB
             utils.logger.info(f"[RedditCrawler] Saving post {reddit_id_str} (mapped ID: {note_id})")
