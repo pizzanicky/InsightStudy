@@ -73,6 +73,7 @@ pydantic==2.5.2
 pydantic-settings==2.2.1
 typer>=0.9.0
 click>=8.1.0
+curl_cffi>=0.5.10
 
 # ===== 开发工具（可选） =====
 pytest>=7.4.0
