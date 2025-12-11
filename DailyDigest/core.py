@@ -125,8 +125,8 @@ SAVE_DATA_OPTION = "postgresql"
             with open(original_config_path, 'w', encoding='utf-8') as f:
                 f.write(modified_content)
             
-            # 运行爬虫
-            cmd = [
+            # 运行Reddit爬虫
+            cmd_reddit = [
                 'python3',
                 str(media_crawler_root / 'main.py'),
                 '--platform', 'reddit',
@@ -135,20 +135,54 @@ SAVE_DATA_OPTION = "postgresql"
                 '--save_data_option', 'postgresql'
             ]
             
-            logger.info(f"[DailyDigest] Running crawler command: {' '.join(cmd)}")
+            logger.info(f"[DailyDigest] Running Reddit crawler: {' '.join(cmd_reddit)}")
             
-            result = subprocess.run(
-                cmd,
+            res_reddit = subprocess.run(
+                cmd_reddit,
                 cwd=str(media_crawler_root),
                 capture_output=True,
                 text=True,
-                timeout=120  # 2分钟超时
+                timeout=120
+            )
+
+            # Log Reddit Results immediately
+            logger.info(f"[DailyDigest] --- REDDIT STDOUT ---\n{res_reddit.stdout or ''}")
+            if res_reddit.stderr:
+                logger.warning(f"[DailyDigest] --- REDDIT STDERR ---\n{res_reddit.stderr}")
+
+            # 运行Stocktwits爬虫
+            cmd_stock = [
+                'python3',
+                str(media_crawler_root / 'main.py'),
+                '--platform', 'stocktwits',
+                '--lt', 'qrcode',
+                '--type', 'search',
+                '--save_data_option', 'postgresql'
+            ]
+            
+            logger.info(f"[DailyDigest] Running Stocktwits crawler: {' '.join(cmd_stock)}")
+            
+            res_stock = subprocess.run(
+                cmd_stock,
+                cwd=str(media_crawler_root),
+                capture_output=True,
+                text=True,
+                timeout=60 # Stocktwits is fast
             )
             
-            # 记录爬虫输出以便调试
-            logger.info(f"[DailyDigest] Crawler STDOUT:\n{result.stdout}")
-            if result.stderr:
-                logger.warning(f"[DailyDigest] Crawler STDERR:\n{result.stderr}")
+            # Log Stocktwits Results immediately
+            logger.info(f"[DailyDigest] --- STOCKTWITS STDOUT ---\n{res_stock.stdout or ''}")
+            if res_stock.stderr:
+                logger.warning(f"[DailyDigest] --- STOCKTWITS STDERR ---\n{res_stock.stderr}")
+            
+            # Use res_reddit for blocked check mostly (legacy logic)
+            # We construct a combined output just for the check below if needed, 
+            # but we can also just check them individually. 
+            # The original code used `combined_output` variable later.
+            result = res_reddit
+            
+            # No need to log combined again
+
             
             # 恢复原配置
             shutil.move(backup_path, original_config_path)

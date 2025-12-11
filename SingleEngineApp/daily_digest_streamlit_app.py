@@ -14,7 +14,7 @@ from DailyDigest.email_service import send_report_email
 st.set_page_config(page_title="Daily Digest", page_icon="📰", layout="wide")
 
 st.title("📰 Daily Sentiment Digest")
-st.markdown("一键爬取Reddit数据并生成情绪摘要分析")
+st.markdown("一键爬取Reddit、Stocktwits数据并生成情绪摘要分析")
 
 # 渲染结果函数
 def render_digest_result(result, keyword):
@@ -389,8 +389,9 @@ if generate_btn or (auto_run and keyword):
         if auto_crawl:
             # 分开调用爬取和生成，实现同步进度显示
             with st.status("🔄 正在处理...", expanded=True) as status:
-                # 步骤1: 爬取数据
-                st.write("📡 步骤 1/2: 爬取Reddit数据...")
+                # 步骤1: 爬取数据 (Reddit + Stocktwits)
+                st.write("📡 步骤 1/2: 正在爬取 Reddit 和 Stocktwits 数据...")
+                st.info("💡 过程: Reddit Crawl -> Stocktwits Crawl")
                 
                 try:
                     # 调用爬取函数

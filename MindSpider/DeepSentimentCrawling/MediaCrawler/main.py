@@ -48,6 +48,9 @@ class CrawlerFactory:
         elif platform == "reddit":
             from media_platform.reddit import RedditCrawler
             return RedditCrawler()
+        elif platform == "stocktwits":
+            from media_platform.stocktwits import StocktwitsCrawler
+            return StocktwitsCrawler()
         else:
             raise ValueError(
                 "Invalid Media Platform Currently only supported xhs, dy, ks, bili, wb, tieba, zhihu, reddit"

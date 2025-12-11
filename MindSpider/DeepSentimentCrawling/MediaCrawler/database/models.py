@@ -212,7 +212,7 @@ class WeiboNote(Base):
     shared_count = Column(Text)
     note_url = Column(Text)
     source_keyword = Column(Text, default='')
-    platform = Column(String(50), default='weibo', index=True)
+    platform = Column(String(50), default='reddit', index=True)
 
 class WeiboNoteComment(Base):
     __tablename__ = 'weibo_note_comment'
