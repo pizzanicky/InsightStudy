@@ -1,8 +1,13 @@
 import asyncio
 from typing import Dict, Optional, Any
 import random
+import re
+import html
+import time
+from datetime import datetime
 from loguru import logger
 from curl_cffi.requests import AsyncSession
+import feedparser
 
 class RedditClient:
     def __init__(self, proxies: Optional[Dict] = None):
@@ -12,17 +17,15 @@ class RedditClient:
         self.timeout = 30
         self.cookies = {}
         
-        logger.info("[RedditClient] 初始化完成 - 使用 curl_cffi (Chrome impersonation)")
+        logger.info("[RedditClient] 初始化完成 - RSS Mode (curl_cffi + feedparser)")
 
-    async def request(self, method: str, url: str, params: Optional[Dict] = None) -> Dict:
+    async def request(self, method: str, url: str, params: Optional[Dict] = None) -> str:
         """
-        发送HTTP请求到Reddit JSON端点 (using curl_cffi)
+        发送HTTP请求 (using curl_cffi) returning TEXT content for RSS parsing
         """
-        # 添加随机延迟（2-4秒），避免被识别为机器人
         delay = random.uniform(2.0, 4.0)
         await asyncio.sleep(delay)
         
-        # impersonate="chrome124" is a more recent browser fingerprint
         async with AsyncSession(
             proxies=self.proxies,
             timeout=self.timeout,
@@ -40,66 +43,144 @@ class RedditClient:
                     params=params
                 )
                 
-                # Update cookies
                 if response.cookies:
                     self.cookies.update(dict(response.cookies))
                 
                 logger.info(f"[RedditClient] 响应状态: {response.status_code}")
                 
                 if response.status_code == 200:
-                    # curl_cffi response.text is a property/method just like requests
-                    # logger.info(f"[RedditClient] 成功获取数据 (前200字符): {response.text[:200]}")
-                    return response.json()
+                    return response.text
                 elif response.status_code == 403:
-                    logger.error(f"[RedditClient] 403错误 - Reddit阻止了请求 (尽管使用了curl_cffi)")
-                    logger.error(f"[RedditClient] 响应内容: {response.text[:500]}")
-                    # Raise generic exception
+                    logger.error(f"[RedditClient] 403错误 via RSS")
                     raise Exception(f"403 Forbidden: {url}")
                 else:
                     response.raise_for_status()
-                    return response.json()
+                    return response.text
                     
             except Exception as e:
                 logger.error(f"[RedditClient] 请求失败: {e}")
                 raise
 
+    def _strip_html(self, text: str) -> str:
+        """Remove HTML tags and unescape entities"""
+        if not text:
+            return ""
+        # Unescape HTML entities first (&amp; -> &, etc.)
+        text = html.unescape(text)
+        # Remove tags
+        clean = re.sub(r'<[^>]+>', '', text)
+        return clean.strip()
+
     async def search(self, keyword: str, limit: int = 100, after: str = None, subreddits: list = None) -> dict:
         """
-        在Reddit搜索关键词
-        使用old.reddit.com端点，更稳定且不易被阻止
-        支持分页 (after)
-        支持限定板块 (subreddits) -> 使用 r/sub1+sub2/search 路径
+        Search Reddit using RSS Feed to bypass blocking.
+        Returns a dict structure mimicking the old JSON API so core.py works unchanged.
         """
-        # 默认搜索全站
-        url = "https://old.reddit.com/search.json"
-        
-        # 如果指定了板块，则构建限定范围的搜索URL
-        # 格式: https://old.reddit.com/r/sub1+sub2+sub3/search.json
+        # RSS Endpoint
+        base_url = "https://www.reddit.com/search.rss"
         if subreddits and len(subreddits) > 0:
             joined_subs = "+".join(subreddits)
-            url = f"https://old.reddit.com/r/{joined_subs}/search.json"
+            base_url = f"https://www.reddit.com/r/{joined_subs}/search.rss"
             
         params = {
             "q": keyword,
-            "limit": limit,
             "sort": "new",
-            "type": "link",  # 只搜索帖子
-            "t": "all",  # 时间范围
-            "restrict_sr": "on" if subreddits else "off"
+            # RSS doesn't support limit or after cursor well. It usually returns latest 25.
         }
         
-        if after:
-            params['after'] = after
+        logger.info(f"[RedditClient] RSS Search: {base_url} | Keyword: {keyword}")
+        
+        try:
+            xml_content = await self.request("GET", base_url, params)
             
-        logger.info(f"[RedditClient] 搜索URL: {url} | Keyword: {keyword} | Subs: {len(subreddits) if subreddits else 0}")
-        return await self.request("GET", url, params)
+            # Parse RSS
+            feed = feedparser.parse(xml_content)
+            
+            if feed.bozo:
+                logger.warning(f"[RedditClient] RSS Parsing Warning: {feed.bozo_exception}")
+
+            children = []
+            for entry in feed.entries:
+                # Map RSS entry to JSON-like 'data' dict
+                
+                # ID: Extract from id tag (usually url) or link
+                # RSS id: <id>https://www.reddit.com/r/stocks/comments/1hba.../title/</id>
+                # We need a clean ID.
+                # Try to extract t3_xxxxx or just use hash?
+                # Link: https://www.reddit.com/r/stocks/comments/1hba5y7/title/
+                # ID is '1hba5y7'
+                
+                post_id = ""
+                if hasattr(entry, 'link'):
+                    match = re.search(r'/comments/([a-z0-9]+)/', entry.link)
+                    if match:
+                        post_id = match.group(1)
+                
+                if not post_id:
+                    continue # Skip if cant parse ID needed for DB
+                
+                # Content
+                title = entry.title if hasattr(entry, 'title') else ""
+                # Summary is usually HTML content
+                raw_summary = entry.summary if hasattr(entry, 'summary') else ""
+                # Some feeds allow content tag
+                if hasattr(entry, 'content'):
+                    raw_summary = entry.content[0].value
+                
+                selftext = self._strip_html(raw_summary)
+                
+                # Time
+                # entry.published_parsed is a struct_time
+                created_utc = 0
+                if hasattr(entry, 'published_parsed') and entry.published_parsed:
+                    created_utc = time.mktime(entry.published_parsed)
+                elif hasattr(entry, 'updated_parsed') and entry.updated_parsed:
+                    created_utc = time.mktime(entry.updated_parsed)
+                
+                # Author
+                author = "unknown"
+                if hasattr(entry, 'author'):
+                    # RSS author format: "/u/username"
+                    author = entry.author.replace('/u/', '')
+                    
+                # Permalink (relative to reddit.com expected by some logic?)
+                # core.py does: note.note_url = f"https://www.reddit.com{permalink}"
+                # But RSS gives full link. We can strip domain or adjust core.
+                # Let's adjust permalink to be relative path to match old JSON behavior
+                permalink = entry.link.replace("https://www.reddit.com", "").replace("https://old.reddit.com", "")
+                
+                post_data = {
+                    'data': {
+                        'id': post_id,
+                        'title': title,
+                        'selftext': selftext,
+                        'created_utc': created_utc,
+                        'author': author,
+                        'permalink': permalink,
+                        'ups': 0, # RSS doesn't have live votes
+                        'num_comments': 0 # RSS doesn't have live comment count
+                    }
+                }
+                children.append(post_data)
+
+            logger.info(f"[RedditClient] RSS Parsed: Found {len(children)} items")
+            
+            # Construct JSON-like response wrapper
+            return {
+                'data': {
+                    'children': children,
+                    'after': None # RSS pagination is hard/not supported in this simple view
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"[RedditClient] RSS Search Logic Failed: {e}")
+            return {'data': {'children': [], 'after': None}}
 
     async def get_comments(self, post_id: str) -> list:
         """
-        获取指定帖子的评论
+        RSS doesn't support fetching comments easily (requires scraping HTML).
+        Returning empty to prevent errors if enabled.
         """
-        clean_id = post_id.split('_')[-1] if '_' in post_id else post_id
-        url = f"https://old.reddit.com/comments/{clean_id}.json"
-        
-        logger.info(f"[RedditClient] 获取帖子评论: {clean_id}")
-        return await self.request("GET", url)
+        logger.warning("[RedditClient] get_comments is NOT supported in RSS mode.")
+        return []
