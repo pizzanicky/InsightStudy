@@ -85,6 +85,7 @@ class RedditClient:
         params = {
             "q": keyword,
             "sort": "new",
+            "limit": limit
             # RSS doesn't support limit or after cursor well. It usually returns latest 25.
         }
         
