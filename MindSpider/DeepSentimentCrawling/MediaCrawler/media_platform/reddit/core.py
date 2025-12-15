@@ -168,7 +168,7 @@ class RedditCrawler(AbstractCrawler):
             note.platform = "reddit"
             
             # Save to DB
-            utils.logger.info(f"[RedditCrawler] Saving post {reddit_id_str} (mapped ID: {note_id})")
+            # utils.logger.info(f"[RedditCrawler] Saving post {reddit_id_str} (mapped ID: {note_id})")
             await self._save_note(note)
             
             # 5. Fetch Comments (if enabled)

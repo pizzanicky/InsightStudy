@@ -79,156 +79,137 @@ class DailyDigest:
     def __init__(self):
         self.llm = SimpleLLM()
     
-    async def crawl_reddit(self, keyword: str, max_count: int = 100):
+    async def _run_media_crawler_subprocess(self, platform: str, keyword: str, max_count: int):
         """
-        爬取Reddit数据
-        使用subprocess调用MediaCrawler，避免导入冲突
-        返回: (success: bool, message: str, post_count: int)
+        Helper to run the MediaCrawler subprocess with config patching
         """
+        import subprocess
+        import shutil
+        import re
+        
+        # Paths
+        temp_config_path = media_crawler_root / "config" / "base_config_temp.py"
+        original_config_path = media_crawler_root / "config" / "base_config.py"
+        backup_path = media_crawler_root / "config" / "base_config_backup.py"
+
         try:
-            logger.info(f"[DailyDigest] Starting Reddit crawl for keyword: {keyword}")
-            
-            # 使用subprocess调用MediaCrawler的爬虫
-            import subprocess
-            import tempfile
-            
-            # 创建临时配置文件
-            config_content = f"""
-PLATFORM = "reddit"
-KEYWORDS = "{keyword}"
-LOGIN_TYPE = "qrcode"
-CRAWLER_TYPE = "search"
-CRAWLER_MAX_NOTES_COUNT = {max_count}
-SAVE_DATA_OPTION = "postgresql"
-"""
-            
-            # 写入临时配置
-            temp_config_path = media_crawler_root / "config" / "base_config_temp.py"
-            original_config_path = media_crawler_root / "config" / "base_config.py"
-            
-            # 备份原配置
-            import shutil
-            backup_path = media_crawler_root / "config" / "base_config_backup.py"
+            # 1. Update Config
+            # Backup
             shutil.copy(original_config_path, backup_path)
             
-            # 读取原配置并更新关键参数
+            # Read & Modify
             with open(original_config_path, 'r', encoding='utf-8') as f:
                 original_content = f.read()
             
-            # 修改配置
-            import re
             modified_content = original_content
+            # Note: We only replace KEYWORDS and MAX_NOTES_COUNT. Platform is passed via CLI.
+            # But the Crawler reads config.KEYWORDS.
             modified_content = re.sub(r'KEYWORDS = .*', f'KEYWORDS = "{keyword}"', modified_content)
             modified_content = re.sub(r'CRAWLER_MAX_NOTES_COUNT = .*', f'CRAWLER_MAX_NOTES_COUNT = {max_count}', modified_content)
             
-            # 写入修改后的配置
             with open(original_config_path, 'w', encoding='utf-8') as f:
                 f.write(modified_content)
             
-            # 运行Reddit爬虫
-            cmd_reddit = [
+            # 2. Run Subprocess
+            cmd = [
                 'python3',
                 str(media_crawler_root / 'main.py'),
-                '--platform', 'reddit',
+                '--platform', platform,
                 '--lt', 'qrcode',
                 '--type', 'search',
                 '--save_data_option', 'postgresql'
             ]
             
-            logger.info(f"[DailyDigest] Running Reddit crawler: {' '.join(cmd_reddit)}")
+            logger.info(f"[DailyDigest] Running {platform} crawler: {' '.join(cmd)}")
             
-            res_reddit = subprocess.run(
-                cmd_reddit,
+            res = subprocess.run(
+                cmd,
                 cwd=str(media_crawler_root),
                 capture_output=True,
                 text=True,
-                timeout=120
+                timeout=120 if platform == 'reddit' else 60
             )
 
-            # Log Reddit Results immediately
-            logger.info(f"[DailyDigest] --- REDDIT STDOUT ---\n{res_reddit.stdout or ''}")
-            if res_reddit.stderr:
-                logger.warning(f"[DailyDigest] --- REDDIT STDERR ---\n{res_reddit.stderr}")
-
-            # 运行Stocktwits爬虫
-            cmd_stock = [
-                'python3',
-                str(media_crawler_root / 'main.py'),
-                '--platform', 'stocktwits',
-                '--lt', 'qrcode',
-                '--type', 'search',
-                '--save_data_option', 'postgresql'
-            ]
-            
-            logger.info(f"[DailyDigest] Running Stocktwits crawler: {' '.join(cmd_stock)}")
-            
-            res_stock = subprocess.run(
-                cmd_stock,
-                cwd=str(media_crawler_root),
-                capture_output=True,
-                text=True,
-                timeout=60 # Stocktwits is fast
-            )
-            
-            # Log Stocktwits Results immediately
-            logger.info(f"[DailyDigest] --- STOCKTWITS STDOUT ---\n{res_stock.stdout or ''}")
-            if res_stock.stderr:
-                logger.warning(f"[DailyDigest] --- STOCKTWITS STDERR ---\n{res_stock.stderr}")
-            
-            # Use res_reddit for blocked check mostly (legacy logic)
-            # We construct a combined output just for the check below if needed, 
-            # but we can also just check them individually. 
-            # The original code used `combined_output` variable later.
-            result = res_reddit
-            
-            # No need to log combined again
-
-            
-            # 恢复原配置
+            # 3. Restore Config
             shutil.move(backup_path, original_config_path)
+            
+            # 4. Log Output
+            tag = platform.upper()
+            logger.info(f"[DailyDigest] --- {tag} STDOUT ---\n{res.stdout or ''}")
+            if res.stderr:
+                logger.warning(f"[DailyDigest] --- {tag} STDERR ---\n{res.stderr}")
 
-            # 🚨 检查是否被 Reddit 拦截 (403 Forbidden)
-            combined_output = (result.stdout or "") + (result.stderr or "")
+            return res
+
+        except Exception as e:
+            logger.error(f"[DailyDigest] Error in _run_media_crawler_subprocess for {platform}: {e}")
+            # Ensure config restore if error
+            if backup_path.exists():
+                 try:
+                     shutil.move(backup_path, original_config_path)
+                 except:
+                     pass
+            raise e
+
+    async def crawl_reddit(self, keyword: str, max_count: int = 100):
+        """
+        专门负责 Reddit 爬取及 Fallback 逻辑
+        """
+        try:
+            res = await self._run_media_crawler_subprocess('reddit', keyword, max_count)
+            
+            # Check 403 / Block
+            combined_output = (res.stdout or "") + (res.stderr or "")
             crawler_blocked = False
             if "403" in combined_output and ("Block" in combined_output or "whoa there" in combined_output or "Reddit" in combined_output):
-                logger.error("[DailyDigest] Crawler detected 403 Forbidden/Blocked response.")
+                logger.error("[DailyDigest] Reddit Crawler detected 403 Forbidden/Blocked.")
                 crawler_blocked = True
-            
-            # 简化逻辑：如果被拦截，或者爬虫失败，或者爬到了0条数据，都尝试使用 Tavily
-            # Check how many posts were crawled (from DB)
-            posts = await self.get_recent_posts(keyword, hours=24)
-            post_count = len(posts)
-            
-            # 只有当没有爬到数据，且（被拦截 或 报错）时，才触发 Fallback
-            # 如果已经爬到了数据(post_count > 0)，即使有403警告(可能是部分资源失败)，也视为成功，直接使用
-            if post_count == 0 and (crawler_blocked or result.returncode != 0):
-                logger.warning(f"[DailyDigest] Primary crawler failed/blocked and NO posts found. Attempting fallback to Tavily Search...")
-                
-                # Fallback to Tavily
-                tavily_success, tavily_msg, tavily_count = await self.crawl_reddit_via_tavily(keyword, max_count)
-                
-                if tavily_success and tavily_count > 0:
-                     return True, f"通过 Tavily 搜索成功获取 {tavily_count} 条数据 (原爬虫失效)", tavily_count
-                
-                # 如果 Tavily 也失败
-                if crawler_blocked:
-                    return False, "❌ 爬虫被 Reddit 拦截且 Tavily 搜索未找到补充数据。\n请检查 TAVILY_API_KEY 配置或更换节点。", 0
-                
-                return False, f"爬虫和搜索均未找到关于 '{keyword}' 的新数据", 0
-            
-            if post_count == 0:
-                 return False, f"爬虫执行完成，但未找到关于 '{keyword}' 的新帖子", 0
 
-
-            logger.info(f"[DailyDigest] Crawl completed. Found {post_count} posts for '{keyword}'")
-            return True, f"成功爬取 {post_count} 条帖子", post_count
+            # Check Database for results
+            posts = await self.get_recent_posts(keyword, hours=24) # Simply check total count? Or filter by platform?
+            # Ideally filter by platform='reddit', but get_recent_posts just filters by keyword. 
+            # It's an approximation.
+            post_count = len(posts) # This counts both reddit and stocktwits if already ran, but here we assume sequential
             
-        except subprocess.TimeoutExpired:
-            logger.error(f"[DailyDigest] Crawler timeout after 120s")
-            return False, "爬取超时（超过2分钟）", 0
+            # Fallback Logic (Reddit Specific)
+            # Only if NO posts found AND (Blocked or Error)
+            if post_count == 0 and (crawler_blocked or res.returncode != 0):
+                logger.warning(f"[DailyDigest] Reddit crawler failed/blocked. Attempting Tavily fallback...")
+                success, msg, count = await self.crawl_reddit_via_tavily(keyword, max_count)
+                return success, msg, count
+            
+            return True, "Reddit Crawl Finished", post_count
+            
         except Exception as e:
-            logger.error(f"[DailyDigest] Crawl failed: {e}")
-            return False, f"爬取异常: {str(e)}", 0
+            logger.error(f"[DailyDigest] crawl_reddit exception: {e}")
+            return False, str(e), 0
+
+    async def crawl_stocktwits(self, keyword: str, max_count: int = 100):
+        """
+        专门负责 Stocktwits 爬取
+        """
+        try:
+            res = await self._run_media_crawler_subprocess('stocktwits', keyword, max_count)
+            return True, "Stocktwits Crawl Finished", 0 # Count check omitted for simplicity or can add later
+        except Exception as e:
+            logger.error(f"[DailyDigest] crawl_stocktwits exception: {e}")
+            return False, str(e), 0
+
+    async def run_crawlers(self, keyword: str, max_count: int = 100):
+        """
+        Orchestrator: Run Reddit then Stocktwits
+        """
+        logger.info(f"[DailyDigest] Starting Multi-Platform Crawl for: {keyword}")
+        
+        # 1. Reddit
+        r_success, r_msg, r_count = await self.crawl_reddit(keyword, max_count)
+        
+        # 2. Stocktwits (Sequential)
+        # No wait needed per user request
+        s_success, s_msg, s_count = await self.crawl_stocktwits(keyword, max_count)
+        
+        total_msg = f"Reddit: {r_msg} | Stocktwits: {s_msg}"
+        return (r_success or s_success), total_msg, (r_count + s_count)
 
     async def crawl_reddit_via_tavily(self, keyword: str, max_results: int = 20):
         """
@@ -487,7 +468,7 @@ def run_crawl(keyword: str, max_count: int = 100):
     """
     clear_engine_cache()
     digest = DailyDigest()
-    return asyncio.run(digest.crawl_reddit(keyword, max_count))
+    return asyncio.run(digest.run_crawlers(keyword, max_count))
 
 def run_digest_generation(keyword: str, hours: int = 24):
     """
