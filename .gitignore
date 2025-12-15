@@ -298,6 +298,7 @@ secrets.json
 *.crt
 config.py
 MindSpider/config.py
+SingleEngineApp/recipients.json
 
 # API 密钥
 api_keys.txt

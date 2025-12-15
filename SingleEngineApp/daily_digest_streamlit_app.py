@@ -248,41 +248,61 @@ def render_digest_result(result, keyword):
     st.divider()
     st.subheader("📧 Send Report via Email")
     
+    # --- Address Book Logic ---
+    import json
+    from pathlib import Path
+    
+    RECIPIENTS_FILE = Path("SingleEngineApp/recipients.json")
+    if not RECIPIENTS_FILE.exists():
+        RECIPIENTS_FILE = Path("recipients.json") # Fallback relative path
+        
+    def load_recipients():
+        if RECIPIENTS_FILE.exists():
+            try:
+                with open(RECIPIENTS_FILE, "r") as f:
+                    return json.load(f)
+            except:
+                return []
+        return []
+
+    recipients_list = load_recipients()
+    
     with st.expander("Email this report", expanded=True):
         email_col1, email_col2 = st.columns([3, 1])
         with email_col1:
-            recipient_email = st.text_input("Recipient Email", placeholder="your_email@example.com")
+            if recipients_list:
+                selected_recipient = st.selectbox("Select Recipient", options=recipients_list)
+            else:
+                st.warning("No recipients found in recipients.json")
+                selected_recipient = None
+                
         with email_col2:
             st.write("") # Spacer
             st.write("") # Spacer
-            send_email_btn = st.button("Send Email", type="primary", use_container_width=True)
+            send_email_btn = st.button("Send Email", type="primary", use_container_width=True, disabled=not recipients_list)
             
-        if send_email_btn:
-            if not recipient_email or "@" not in recipient_email:
-                st.error("Please enter a valid email address.")
-            else:
-                with st.spinner("Sending email..."):
-                    # Prepare data
-                    # Prepare data
-                    # Ensure date_str is only date, no time
-                    raw_date = str(result.get("date", "Unknown Date"))
-                    date_str = raw_date.split(" ")[0]
-                    subject = f"WGD每日摘要：{result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
-                    
-                    # Call backend
-                    success_result = send_report_email(
-                        to_email=recipient_email,
-                        subject=subject,
-                        summary_md=result["summary"],
-                        cover_card=result.get("cover_card"),
-                        ticker=keyword,
-                        date_str=date_str
-                    )
-                    
-                    if success_result["success"]:
-                        st.success("✅ Email sent successfully!")
-                    else:
-                        st.error(f"❌ {success_result['message']}")
+        if send_email_btn and selected_recipient:
+            with st.spinner(f"Sending email to {selected_recipient}..."):
+                # Prepare data
+                # Ensure date_str is only date, no time
+                raw_date = str(result.get("date", "Unknown Date"))
+                date_str = raw_date.split(" ")[0]
+                subject = f"WGD每日摘要：{result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
+                
+                # Call backend
+                success_result = send_report_email(
+                    to_email=selected_recipient,
+                    subject=subject,
+                    summary_md=result["summary"],
+                    cover_card=result.get("cover_card"),
+                    ticker=keyword,
+                    date_str=date_str
+                )
+                
+                if success_result["success"]:
+                    st.success(f"✅ Email sent successfully to {selected_recipient}!")
+                else:
+                    st.error(f"❌ {success_result['message']}")
 
 # Sidebar configuration
 with st.sidebar:
