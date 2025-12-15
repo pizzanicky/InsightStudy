@@ -6,42 +6,7 @@ from database.models import WeiboNote, WeiboNoteComment
 from database.db_session import get_session
 from tools.utils import utils
 
-async def update_reddit_note_as_weibo(note: WeiboNote):
-    """
-    Save or update a Reddit post (mapped to WeiboNote)
-    """
-    async with get_session() as session:
-        try:
-            # Check if exists
-            # We use note_id which we converted from reddit ID
-            # But wait, create_time/update logic?
-            # For now, simplistic "add or update"
-            
-            # Since we are using sqlalchemy async session
-            # Check existence by note_id
-            from sqlalchemy import select
-            stmt = select(WeiboNote).where(WeiboNote.note_id == note.note_id)
-            result = await session.execute(stmt)
-            existing = result.scalars().first()
-            
-            if existing:
-                # Update fields
-                existing.content = note.content
-                existing.liked_count = note.liked_count
-                existing.comments_count = note.comment_count
-                existing.last_modify_ts = int(datetime.now().timestamp() * 1000)
-                # Don't update create_time usually
-            else:
-                note.add_ts = int(datetime.now().timestamp() * 1000)
-                note.last_modify_ts = note.add_ts
-                session.add(note)
-            
-            await session.commit()
-            # utils.logger.info(f"[RedditStore] Saved note {note.note_id}")
-            
-        except Exception as e:
-            utils.logger.error(f"[RedditStore] Failed to save note {note.note_id}: {e}")
-            await session.rollback()
+# update_reddit_note_as_weibo has been moved to media_platform.common.store.save_or_update_note
 
 async def batch_update_reddit_comments(comments: List[WeiboNoteComment]):
     """

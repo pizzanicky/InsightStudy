@@ -151,12 +151,15 @@ class DailyDigest:
                      pass
             raise e
 
+    async def _get_platform_count(self, keyword, platform, hours=24):
+        posts = await self.get_recent_posts(keyword, hours)
+        # simplistic filter since get_recent_posts fetches all for keyword
+        return sum(1 for p in posts if p.platform == platform)
+
     async def crawl_reddit(self, keyword: str, max_count: int = 100):
-        """
-        专门负责 Reddit 爬取及 Fallback 逻辑
-        """
         try:
             res = await self._run_media_crawler_subprocess('reddit', keyword, max_count)
+            count = await self._get_platform_count(keyword, 'reddit')
             
             # Check 403 / Block
             combined_output = (res.stdout or "") + (res.stderr or "")
@@ -164,52 +167,44 @@ class DailyDigest:
             if "403" in combined_output and ("Block" in combined_output or "whoa there" in combined_output or "Reddit" in combined_output):
                 logger.error("[DailyDigest] Reddit Crawler detected 403 Forbidden/Blocked.")
                 crawler_blocked = True
-
-            # Check Database for results
-            posts = await self.get_recent_posts(keyword, hours=24) # Simply check total count? Or filter by platform?
-            # Ideally filter by platform='reddit', but get_recent_posts just filters by keyword. 
-            # It's an approximation.
-            post_count = len(posts) # This counts both reddit and stocktwits if already ran, but here we assume sequential
             
-            # Fallback Logic (Reddit Specific)
-            # Only if NO posts found AND (Blocked or Error)
-            if post_count == 0 and (crawler_blocked or res.returncode != 0):
-                logger.warning(f"[DailyDigest] Reddit crawler failed/blocked. Attempting Tavily fallback...")
-                success, msg, count = await self.crawl_reddit_via_tavily(keyword, max_count)
-                return success, msg, count
+            # Fallback
+            if count == 0 and (crawler_blocked or res.returncode != 0):
+                 # Try Tavily
+                 return await self.crawl_reddit_via_tavily(keyword, max_count)
             
-            return True, "Reddit Crawl Finished", post_count
-            
+            return True, "Reddit Finished", count
         except Exception as e:
             logger.error(f"[DailyDigest] crawl_reddit exception: {e}")
             return False, str(e), 0
 
     async def crawl_stocktwits(self, keyword: str, max_count: int = 100):
-        """
-        专门负责 Stocktwits 爬取
-        """
         try:
-            res = await self._run_media_crawler_subprocess('stocktwits', keyword, max_count)
-            return True, "Stocktwits Crawl Finished", 0 # Count check omitted for simplicity or can add later
+            await self._run_media_crawler_subprocess('stocktwits', keyword, max_count)
+            count = await self._get_platform_count(keyword, 'stocktwits')
+            return True, "Stocktwits Finished", count
         except Exception as e:
             logger.error(f"[DailyDigest] crawl_stocktwits exception: {e}")
             return False, str(e), 0
 
+    async def crawl_hackernews(self, keyword: str, max_count: int = 100):
+        try:
+            await self._run_media_crawler_subprocess('hackernews', keyword, max_count)
+            count = await self._get_platform_count(keyword, 'hackernews')
+            return True, "HackerNews Finished", count
+        except Exception as e:
+            logger.error(f"[DailyDigest] crawl_hackernews exception: {e}")
+            return False, str(e), 0
+
     async def run_crawlers(self, keyword: str, max_count: int = 100):
-        """
-        Orchestrator: Run Reddit then Stocktwits
-        """
         logger.info(f"[DailyDigest] Starting Multi-Platform Crawl for: {keyword}")
         
-        # 1. Reddit
         r_success, r_msg, r_count = await self.crawl_reddit(keyword, max_count)
-        
-        # 2. Stocktwits (Sequential)
-        # No wait needed per user request
         s_success, s_msg, s_count = await self.crawl_stocktwits(keyword, max_count)
+        h_success, h_msg, h_count = await self.crawl_hackernews(keyword, max_count)
         
-        total_msg = f"Reddit: {r_msg} | Stocktwits: {s_msg}"
-        return (r_success or s_success), total_msg, (r_count + s_count)
+        total_msg = f"Reddit: {r_count} | Stocktwits: {s_count} | HN: {h_count}"
+        return (r_success or s_success or h_success), total_msg, (r_count + s_count + h_count)
 
     async def crawl_reddit_via_tavily(self, keyword: str, max_results: int = 20):
         """

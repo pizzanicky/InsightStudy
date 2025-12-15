@@ -169,20 +169,25 @@ class RedditCrawler(AbstractCrawler):
             
             # Save to DB
             # utils.logger.info(f"[RedditCrawler] Saving post {reddit_id_str} (mapped ID: {note_id})")
-            await self._save_note(note)
+            from media_platform.common.store import save_or_update_note
+            await save_or_update_note(note)
             
             # 5. Fetch Comments (if enabled)
             if config.ENABLE_GET_COMMENTS:
-                await self._process_comments(reddit_id_str, note_id)
+                await self._process_comments(post_data, note_id)
             
         except Exception as e:
             utils.logger.error(f"[RedditCrawler] Error processing post: {e}")
 
-    async def _process_comments(self, reddit_post_id: str, db_note_id: int):
+    async def _process_comments(self, post_data: Dict, db_note_id: int):
         """
         Fetch and process comments for a post
         """
         try:
+            reddit_post_id = post_data.get('id')
+            if not reddit_post_id:
+                return
+
             # 1. Fetch from API
             # Reddit API returns [post_listing, comment_listing]
             response = await self.client.get_comments(reddit_post_id)

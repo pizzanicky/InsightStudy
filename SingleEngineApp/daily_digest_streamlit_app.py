@@ -389,9 +389,9 @@ if generate_btn or (auto_run and keyword):
         if auto_crawl:
             # 分开调用爬取和生成，实现同步进度显示
             with st.status("🔄 正在处理...", expanded=True) as status:
-                # 步骤1: 爬取数据 (Reddit + Stocktwits)
-                st.write("📡 步骤 1/2: 正在爬取 Reddit 和 Stocktwits 数据...")
-                st.info("💡 过程: Reddit Crawl -> Stocktwits Crawl")
+                # 步骤1: 爬取数据 (Reddit + Stocktwits + Hacker News)
+                st.write("📡 步骤 1/2: 正在爬取 Reddit, Stocktwits 和 Hacker News 数据...")
+                st.info("💡 过程: Reddit Crawl -> Stocktwits Crawl -> Hacker News Crawl")
                 
                 try:
                     # 调用爬取函数

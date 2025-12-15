@@ -39,6 +39,7 @@ class PlatformEnum(str, Enum):
     ZHIHU = "zhihu"
     REDDIT = "reddit"
     STOCKTWITS = "stocktwits"
+    HACKERNEWS = "hackernews"
 
 
 class LoginTypeEnum(str, Enum):

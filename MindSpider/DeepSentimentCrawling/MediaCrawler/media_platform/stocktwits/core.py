@@ -149,7 +149,6 @@ class StocktwitsCrawler(AbstractCrawler):
             utils.logger.error(f"[StocktwitsCrawler] Error processing message {msg.get('id')}: {e}")
 
     async def _save_note(self, note: WeiboNote):
-        # Reusing Reddit Store logic which maps to WeiboNote table generic save
-        # It's actually generic, just named reddit
-        from media_platform.reddit.store import update_reddit_note_as_weibo
-        await update_reddit_note_as_weibo(note)
+        # Save to DB
+        from media_platform.common.store import save_or_update_note
+        await save_or_update_note(note)
