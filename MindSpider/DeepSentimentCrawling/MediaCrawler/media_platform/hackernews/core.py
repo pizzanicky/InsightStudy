@@ -35,16 +35,19 @@ class HackerNewsCrawler(AbstractCrawler):
         
         utils.logger.info(f"[HackerNewsCrawler] Starting crawl for: {keyword}, target: {target_count}")
         
-        # Calculate timestamp for last 24h/custom window? 
-        # For now, let's just fetch recent. 
-        # Algolia search_by_date sorts by date desc naturally.
+        # Calculate timestamp for last 72 hours (3 days)
+        # Algolia uses seconds for created_at_i
+        import time
+        min_timestamp = int(time.time() - (72 * 3600))
+        
+        utils.logger.info(f"[HackerNewsCrawler] Filtering stories created after: {datetime.fromtimestamp(min_timestamp)}")
         
         total_crawled = 0
         page = 0
         hits_per_page = 20
         
         while total_crawled < target_count:
-            data = await self.client.search_stories(keyword, hits_per_page=hits_per_page, page=page)
+            data = await self.client.search_stories(keyword, hits_per_page=hits_per_page, page=page, min_timestamp=min_timestamp)
             if not data:
                 break
                 
