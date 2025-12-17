@@ -353,7 +353,7 @@ class DailyDigest:
             return "No posts found."
             
         formatted_text = ""
-        for i, post in enumerate(posts[:50]): # 限制到50条帖子避免超过token限制
+        for i, post in enumerate(posts[:200]): # 限制到200条帖子避免超过token限制
             # 数据映射: 
             # content -> 标题 + 内容
             # liked_count -> 评分/点赞数
