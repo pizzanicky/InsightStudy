@@ -235,6 +235,7 @@ class WeiboNote(Base):
     shared_count: Mapped[str | None] = mapped_column(Text, nullable=True)
     note_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     source_keyword: Mapped[str | None] = mapped_column(Text, default='', nullable=True)
+    platform: Mapped[str | None] = mapped_column(String(50), default='reddit', index=True, nullable=True)
     topic_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("daily_topics.topic_id", ondelete="SET NULL"), nullable=True)
     crawling_task_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("crawling_tasks.task_id", ondelete="SET NULL"), nullable=True)
 
