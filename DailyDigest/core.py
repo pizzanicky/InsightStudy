@@ -10,6 +10,10 @@ from loguru import logger
 from dotenv import load_dotenv
 load_dotenv()
 
+import warnings
+# Suppress Pydantic shadowing warnings from SDK internals
+warnings.filterwarnings("ignore", message='Field name ".*" shadows an attribute in parent "Operation"', category=UserWarning)
+
 # Setup paths
 project_root = Path(__file__).resolve().parents[1]
 media_crawler_root = project_root / "MindSpider" / "DeepSentimentCrawling" / "MediaCrawler"
@@ -34,7 +38,7 @@ from MindSpider.DeepSentimentCrawling.MediaCrawler.database.models import WeiboN
 from DailyDigest.prompts import DAILY_DIGEST_PROMPT
 
 # Import Google Gemini SDK
-import google.generativeai as genai
+from google import genai
 
 class SimpleLLM:
     """Simple wrapper around Google Gemini API"""
@@ -47,10 +51,7 @@ class SimpleLLM:
             raise ValueError("GOOGLE_API_KEY is not configured in .env file")
         
         # Configure Google Gemini
-        genai.configure(api_key=api_key)
-        
-        # Initialize the model
-        self.model = genai.GenerativeModel(model_name)
+        self.client = genai.Client(api_key=api_key)
         self.model_name = model_name
         
         logger.info(f"[SimpleLLM] Initialized Google Gemini: {model_name}")
@@ -61,7 +62,10 @@ class SimpleLLM:
             logger.info(f"[SimpleLLM] Sending request to {self.model_name}")
             
             # Generate content using Gemini
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
             
             # Extract text from response
             if response and response.text:

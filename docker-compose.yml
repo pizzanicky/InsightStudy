@@ -27,6 +27,7 @@ services:
       - ./SingleEngineApp:/app/SingleEngineApp
       - ./DailyDigest:/app/DailyDigest
       - ./tests:/app/tests
+      - ./requirements.txt:/app/requirements.txt
 
   db:
     image: postgres:15
