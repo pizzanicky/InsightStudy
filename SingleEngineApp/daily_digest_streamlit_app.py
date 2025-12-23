@@ -412,7 +412,7 @@ if generate_btn or (auto_run and keyword):
                 
                 try:
                     # 调用爬取函数
-                    crawl_success, crawl_message, post_count = run_crawl(keyword, max_posts)
+                    crawl_success, crawl_message, post_count = run_crawl(keyword, max_posts, hours)
                     
                     # 显示爬取结果
                     if crawl_success:
