@@ -1,37 +1,26 @@
 services:
-  bettafish:
-    # image: ghcr.io/666ghj/bettafish:latest
-    # Speed up mirror
-    image: ghcr.nju.edu.cn/666ghj/bettafish:latest
-    container_name: bettafish
+  wgd-insight:
+    # image: ghcr.io/pizzanicky/wgd-insight:latest
+    build: .
+    container_name: wgd-insight
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
       - STREAMLIT_SERVER_ENABLE_FILE_WATCHER=false
     ports:
-      - "5001:5000"
-      - "8501:8501"
-      - "8502:8502"
-      - "8503:8503"
-      - "8504:8504"
+      - "8504:8501" # Host 8504 -> Container 8501 (Default Streamlit)
     volumes:
       - ./.env:/app/.env
       - ./logs:/app/logs
-      - ./final_reports:/app/final_reports
-      - ./insight_engine_streamlit_reports:/app/insight_engine_streamlit_reports
-      - ./media_engine_streamlit_reports:/app/media_engine_streamlit_reports
-      - ./query_engine_streamlit_reports:/app/query_engine_streamlit_reports
       - ./MindSpider:/app/MindSpider
-      - ./app.py:/app/app.py
-      - ./templates:/app/templates
       - ./SingleEngineApp:/app/SingleEngineApp
       - ./DailyDigest:/app/DailyDigest
-      - ./tests:/app/tests
       - ./requirements.txt:/app/requirements.txt
+    command: streamlit run SingleEngineApp/daily_digest_streamlit_app.py --server.port 8501 --server.address 0.0.0.0
 
   db:
     image: postgres:15
-    container_name: bettafish-db
+    container_name: wgd-insight-db
     restart: unless-stopped
     env_file:
       - .env
