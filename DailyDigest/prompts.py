@@ -45,8 +45,8 @@ DAILY_DIGEST_PROMPT = """
 [你的总结内容]
 
 **亮点：**
-*   [亮点 1] [^1]
-*   [亮点 2] [^2]
+*   [亮点 1] [1]
+*   [亮点 2] [2]
 *   ...
 
 **免责声明**：本内容基于网络公开信息汇总，不构成任何投资建议。
@@ -54,11 +54,11 @@ DAILY_DIGEST_PROMPT = """
 ---
 
 ### References
-[^1]: [Title](URL)
-[^2]: [Title](URL)
+- [1] [Title](URL)
+- [2] [Title](URL)
 ...
 
-**注意：一次性输出英文和中文两个版本，英文版本在前，中文版本在后。输出结果中不要暴露原贴用户ID信息，不要提及信息来源平台名称。允许在“参考文献”部分使用来源链接以便核查，但正文中不要直接展示URL。**
+**注意：一次性输出英文和中文两个版本，英文版本在前，中文版本在后，参考链接统一放在最后。输出结果中不要暴露原贴用户ID信息，不要提及信息来源平台名称。允许在“参考文献”部分使用来源链接以便核查，但正文中不要直接展示URL。**
 
 Finally, output a JSON object (and ONLY the JSON) at the very end of your response for the cover card, with these fields:
 
