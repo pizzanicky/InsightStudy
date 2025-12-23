@@ -52,10 +52,10 @@ def render_digest_result(result, keyword):
             }}
             .cover-card {{
                 width: 375px;
-                height: 500px;
+                min-height: 520px;
                 background: linear-gradient(145deg, #1e293b, #0f172a);
                 border-radius: 20px;
-                padding: 40px 30px 60px 30px;
+                padding: 35px 25px 50px 25px;
                 color: white;
                 font-family: 'Inter', system-ui, sans-serif;
                 box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
@@ -81,33 +81,23 @@ def render_digest_result(result, keyword):
                 mask-composite: exclude;
                 pointer-events: none;
             }}
-            .cover-card::after {{
-                content: "";
-                position: absolute;
-                top: -50%;
-                left: -50%;
-                width: 200%;
-                height: 200%;
-                background: radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 70%);
-                pointer-events: none;
-            }}
             .card-header {{
                 text-align: center;
-                margin-bottom: 40px;
+                margin-bottom: 30px;
                 z-index: 1;
             }}
             .ticker {{
-                font-size: 48px;
+                font-size: 42px;
                 font-weight: 900;
                 letter-spacing: 2px;
                 line-height: 1;
-                margin-bottom: 12px;
+                margin-bottom: 8px;
                 color: #ffffff;
             }}
             .date {{
-                font-size: 13px;
+                font-size: 12px;
                 color: #94a3b8;
-                opacity: 0.6;
+                opacity: 0.7;
                 font-weight: 400;
                 letter-spacing: 1px;
             }}
@@ -122,71 +112,78 @@ def render_digest_result(result, keyword):
             }}
             .sentiment-badge {{
                 display: inline-block;
-                padding: 10px 24px;
+                padding: 8px 20px;
                 border-radius: 30px;
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: 700;
                 color: {badge_color};
                 background-color: {badge_bg};
-                margin-bottom: 12px;
+                margin-bottom: 8px;
                 border: 2px solid {badge_color};
-                letter-spacing: 2px;
-            }}
-            .score-display {{
-                font-size: 16px;
-                font-weight: 600;
-                color: #e2e8f0;
-                margin-bottom: 24px;
                 letter-spacing: 1px;
             }}
-            .score-percent {{
-                font-size: 13px;
+            .sentiment-badge-en {{
+                font-size: 12px;
                 color: #94a3b8;
-                font-weight: 400;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                margin-bottom: 15px;
+                font-weight: 600;
+            }}
+            .score-display {{
+                font-size: 14px;
+                font-weight: 600;
+                color: #e2e8f0;
+                margin-bottom: 20px;
+                letter-spacing: 1px;
             }}
             .headline {{
-                font-size: 24px;
+                font-size: 22px;
                 font-weight: 700;
-                line-height: 1.4;
+                line-height: 1.3;
                 color: #f8fafc;
-                max-width: 100%;
-                text-wrap: balance;
-                margin-bottom: 16px;
+                margin-bottom: 8px;
+            }}
+            .headline-en {{
+                font-size: 14px;
+                font-weight: 400;
+                line-height: 1.4;
+                color: #94a3b8;
+                margin-bottom: 25px;
+                font-style: italic;
             }}
             .card-footer {{
                 display: flex;
                 flex-wrap: wrap;
-                gap: 10px;
+                gap: 8px;
                 justify-content: center;
-                margin-bottom: 24px;
+                margin-bottom: 20px;
                 z-index: 1;
             }}
             .factor-tag {{
                 background-color: rgba(30, 41, 59, 0.8);
                 color: #e2e8f0;
-                padding: 6px 14px;
-                border-radius: 12px;
-                font-size: 12px;
+                padding: 5px 12px;
+                border-radius: 10px;
+                font-size: 11px;
                 border: 1px solid #475569;
-                font-weight: 500;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }}
+            .factor-en {{
+                font-size: 9px;
+                color: #94a3b8;
+                margin-top: 2px;
             }}
             .brand-footer {{
                 text-align: center;
-                font-size: 10px;
+                font-size: 9px;
                 color: #64748b;
                 text-transform: uppercase;
                 letter-spacing: 3px;
                 border-top: 1px solid rgba(255, 255, 255, 0.05);
-                padding-top: 20px;
-                z-index: 1;
-            }}
-            .disclaimer {{
-                text-align: center;
-                font-size: 9px;
-                color: #94a3b8;
-                opacity: 0.7;
-                padding: 8px 0;
-                letter-spacing: 0.5px;
+                padding-top: 15px;
                 z-index: 1;
             }}
         </style>
@@ -198,14 +195,14 @@ def render_digest_result(result, keyword):
                 </div>
                 <div class="card-body">
                     <div class="sentiment-badge">{card.get('sentiment_label', 'N/A')}</div>
-                    <div class="score-display">{score:.1f}/10 <span class="score-percent">({int(score*10)}%)</span></div>
+                    <div class="sentiment-badge-en">{card.get('sentiment_label_en', '')}</div>
+                    <div class="score-display">{score:.1f}/10</div>
                     <div class="headline">{card.get('headline', 'Market Insight')}</div>
+                    <div class="headline-en">{card.get('headline_en', '')}</div>
                 </div>
                 <div class="card-footer">
-                    {''.join([f'<span class="factor-tag">{f}</span>' for f in card.get('key_factors', [])])}
-                </div>
-                <div class="disclaimer">
-                    基于网络公开信息汇总，不构成任何投资建议
+                    {''.join([f'<div class="factor-tag"><span>{f}</span><span class="factor-en">{en}</span></div>' 
+                              for f, en in zip(card.get('key_factors', []), card.get('key_factors_en', ['']*3))])}
                 </div>
                 <div class="brand-footer">
                     WGD Insight | Sentiment Data
@@ -287,7 +284,7 @@ def render_digest_result(result, keyword):
                 # Ensure date_str is only date, no time
                 raw_date = str(result.get("date", "Unknown Date"))
                 date_str = raw_date.split(" ")[0]
-                subject = f"WGD每日摘要：{result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
+                subject = f"WGD Daily Digest: {result.get('cover_card', {}).get('ticker', keyword)} {date_str}"
                 
                 # Call backend
                 success_result = send_report_email(
@@ -415,7 +412,7 @@ if generate_btn or (auto_run and keyword):
                 
                 try:
                     # 调用爬取函数
-                    crawl_success, crawl_message, post_count = run_crawl(keyword, max_posts)
+                    crawl_success, crawl_message, post_count = run_crawl(keyword, max_posts, hours)
                     
                     # 显示爬取结果
                     if crawl_success:

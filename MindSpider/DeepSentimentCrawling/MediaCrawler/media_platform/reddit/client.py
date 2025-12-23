@@ -85,9 +85,11 @@ class RedditClient:
         params = {
             "q": keyword,
             "sort": "new",
-            "limit": limit
-            # RSS doesn't support limit or after cursor well. It usually returns latest 25.
+            "limit": 100 # RSS usually allows up to 100
         }
+        if after:
+            params["after"] = after
+            params["count"] = 100 # Helps with pagination context
         
         logger.info(f"[RedditClient] RSS Search: {base_url} | Keyword: {keyword}")
         
@@ -113,9 +115,9 @@ class RedditClient:
                 
                 post_id = ""
                 if hasattr(entry, 'link'):
-                    match = re.search(r'/comments/([a-z0-9]+)/', entry.link)
+                    match = re.search(r'/comments/([a-zA-Z0-9]+)/', entry.link)
                     if match:
-                        post_id = match.group(1)
+                        post_id = match.group(1).lower()
                 
                 if not post_id:
                     continue # Skip if cant parse ID needed for DB
@@ -167,10 +169,20 @@ class RedditClient:
             logger.info(f"[RedditClient] RSS Parsed: Found {len(children)} items")
             
             # Construct JSON-like response wrapper
+            # Reddit's 'after' cursor is usually t3_id. 
+            # We take the last post found to provide continuity.
+            next_cursor = None
+            if children:
+                last_post_id = children[-1]['data']['id']
+                if not last_post_id.startswith('t3_'):
+                    next_cursor = f"t3_{last_post_id}"
+                else:
+                    next_cursor = last_post_id
+
             return {
                 'data': {
                     'children': children,
-                    'after': None # RSS pagination is hard/not supported in this simple view
+                    'after': next_cursor
                 }
             }
             

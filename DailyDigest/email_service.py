@@ -191,28 +191,36 @@ def _create_email_html(content_html: str, card: dict, ticker: str, date_str: str
         
         # Card Container: White background, Dark Text
         card_html = f"""
-        <!-- Cover Card (Light Theme) -->
-        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 30px; margin-bottom: 30px; color: #0f172a; text-align: center; max-width: 400px; margin-left: auto; margin-right: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-            <div style="font-size: 36px; font-weight: 900; letter-spacing: 2px; margin-bottom: 5px; color: #0f172a;">{ticker}</div>
-            <div style="font-size: 13px; color: #64748b; margin-bottom: 20px;">{date_str}</div>
+        <!-- Cover Card (Light Theme - Bilingual) -->
+        <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 25px; margin-bottom: 30px; color: #0f172a; text-align: center; max-width: 400px; margin-left: auto; margin-right: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <div style="font-size: 32px; font-weight: 900; letter-spacing: 2px; margin-bottom: 5px; color: #0f172a;">{ticker}</div>
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 20px;">{date_str}</div>
             
-            <div style="display: inline-block; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 700; color: {badge_color}; background-color: {badge_bg}; border: 1px solid {badge_border}; margin-bottom: 10px;">
+            <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; color: {badge_color}; background-color: {badge_bg}; border: 1px solid {badge_border}; margin-bottom: 5px;">
                 {sentiment_label}
             </div>
+            <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 600;">
+                {card.get('sentiment_label_en', '')}
+            </div>
             
-            <div style="font-size: 14px; color: #475569; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #475569; margin-bottom: 15px;">
                 Score: {score:.1f}/10
             </div>
             
-            <div style="font-size: 20px; font-weight: 700; line-height: 1.4; color: #1e293b; margin-bottom: 20px;">
+            <div style="font-size: 18px; font-weight: 700; line-height: 1.3; color: #1e293b; margin-bottom: 5px;">
                 {headline}
+            </div>
+            <div style="font-size: 12px; font-weight: 400; line-height: 1.4; color: #64748b; margin-bottom: 15px; font-style: italic;">
+                {card.get('headline_en', '')}
             </div>
             
             <div style="margin-bottom: 20px;">
-                {factors_html}
+                {''.join([f'<div style="display:inline-block; background:#f1f5f9; color:#334155; padding:5px 10px; border-radius:8px; font-size:11px; margin:2px; border:1px solid #cbd5e1; text-align:center;">'
+                          f'<div>{f}</div><div style="font-size:9px; color:#64748b;">{en}</div></div>'
+                          for f, en in zip(card.get('key_factors', []), card.get('key_factors_en', ['']*3))])}
             </div>
             
-            <div style="font-size: 10px; color: #94a3b8; letter-spacing: 2px; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+            <div style="font-size: 9px; color: #94a3b8; letter-spacing: 2px; padding-top: 15px; border-top: 1px solid #f1f5f9;">
                 WGD INSIGHT DATA
             </div>
         </div>

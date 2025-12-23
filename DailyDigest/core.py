@@ -160,10 +160,10 @@ class DailyDigest:
         # simplistic filter since get_recent_posts fetches all for keyword
         return sum(1 for p in posts if p.platform == platform)
 
-    async def crawl_reddit(self, keyword: str, max_count: int = 100):
+    async def crawl_reddit(self, keyword: str, max_count: int = 100, hours: int = 24):
         try:
             res = await self._run_media_crawler_subprocess('reddit', keyword, max_count)
-            count = await self._get_platform_count(keyword, 'reddit')
+            count = await self._get_platform_count(keyword, 'reddit', hours)
             
             # Check 403 / Block
             combined_output = (res.stdout or "") + (res.stderr or "")
@@ -182,30 +182,30 @@ class DailyDigest:
             logger.error(f"[DailyDigest] crawl_reddit exception: {e}")
             return False, str(e), 0
 
-    async def crawl_stocktwits(self, keyword: str, max_count: int = 100):
+    async def crawl_stocktwits(self, keyword: str, max_count: int = 100, hours: int = 24):
         try:
             await self._run_media_crawler_subprocess('stocktwits', keyword, max_count)
-            count = await self._get_platform_count(keyword, 'stocktwits')
+            count = await self._get_platform_count(keyword, 'stocktwits', hours)
             return True, "Stocktwits Finished", count
         except Exception as e:
             logger.error(f"[DailyDigest] crawl_stocktwits exception: {e}")
             return False, str(e), 0
 
-    async def crawl_hackernews(self, keyword: str, max_count: int = 100):
+    async def crawl_hackernews(self, keyword: str, max_count: int = 100, hours: int = 24):
         try:
             await self._run_media_crawler_subprocess('hackernews', keyword, max_count)
-            count = await self._get_platform_count(keyword, 'hackernews')
+            count = await self._get_platform_count(keyword, 'hackernews', hours)
             return True, "HackerNews Finished", count
         except Exception as e:
             logger.error(f"[DailyDigest] crawl_hackernews exception: {e}")
             return False, str(e), 0
 
-    async def run_crawlers(self, keyword: str, max_count: int = 100):
-        logger.info(f"[DailyDigest] Starting Multi-Platform Crawl for: {keyword}")
+    async def run_crawlers(self, keyword: str, max_count: int = 100, hours: int = 24):
+        logger.info(f"[DailyDigest] Starting Multi-Platform Crawl for: {keyword} (Window: {hours}h)")
         
-        r_success, r_msg, r_count = await self.crawl_reddit(keyword, max_count)
-        s_success, s_msg, s_count = await self.crawl_stocktwits(keyword, max_count)
-        h_success, h_msg, h_count = await self.crawl_hackernews(keyword, max_count)
+        r_success, r_msg, r_count = await self.crawl_reddit(keyword, max_count, hours)
+        s_success, s_msg, s_count = await self.crawl_stocktwits(keyword, max_count, hours)
+        h_success, h_msg, h_count = await self.crawl_hackernews(keyword, max_count, hours)
         
         total_msg = f"Reddit: {r_count} | Stocktwits: {s_count} | HN: {h_count}"
         return (r_success or s_success or h_success), total_msg, (r_count + s_count + h_count)
@@ -460,14 +460,14 @@ class DailyDigest:
             }
 
 # Helper functions for synchronous execution (e.g. from Streamlit)
-def run_crawl(keyword: str, max_count: int = 100):
+def run_crawl(keyword: str, max_count: int = 100, hours: int = 24):
     """
     同步执行爬取
     返回: (success: bool, message: str, post_count: int)
     """
     clear_engine_cache()
     digest = DailyDigest()
-    return asyncio.run(digest.run_crawlers(keyword, max_count))
+    return asyncio.run(digest.run_crawlers(keyword, max_count, hours))
 
 def run_digest_generation(keyword: str, hours: int = 24):
     """

@@ -26,7 +26,7 @@ DAILY_DIGEST_PROMPT = """
 3.  **总结**：简明扼要地总结整体讨论，突出任何重大新闻、传闻或社区反应。
 4.  **热门帖子亮点**：简要提及 10 个最重要的帖子（如果有），优先选择有逻辑支撑的 Reddit 帖子或极具代表性的 Stocktwits 情绪，或Hacker News的技术分析。
 5.  **开头免责声明**：本内容基于网络公开信息汇总，不构成任何投资建议。
-6.  **用词避免触发小红书审核**：保持客观中立的观察者视角，避免使用购买建议、投资建议类用词。如果出现”比特币“、”以太坊“等敏感词，请用”加密货币“替代。
+6.  **用词避免触发审核**：保持客观中立的观察者视角，避免使用购买建议、投资建议类用词。如果出现”比特币“、”以太坊“等敏感词，请用”加密货币“替代。
 
 **格式严格约束（Markdown）：**
 *   **列表**：必须使用减号 `-` 加空格作为列表符（例如 `- 观点1`），**严禁**使用星号 `*` 作为列表符。
@@ -45,25 +45,31 @@ DAILY_DIGEST_PROMPT = """
 [你的总结内容]
 
 **亮点：**
-*   [亮点 1] [^1]
-*   [亮点 2] [^2]
+*   [亮点 1] [1]
+*   [亮点 2] [2]
 *   ...
 
-**参考文献：**
-[^1]: [帖子标题](URL)
-[^2]: [帖子标题](URL)
-[^3]: [帖子标题](URL)
+**免责声明**：本内容基于网络公开信息汇总，不构成任何投资建议。
+
+---
+
+### References
+- [1] [Title](URL)
+- [2] [Title](URL)
 ...
 
-**注意：请用中文回复所有内容。输出结果中不要暴露原贴用户ID信息，不要提及信息来源平台名称。允许在“参考文献”部分使用来源链接以便核查，但正文中不要直接展示URL。**
+**注意：一次性输出英文和中文两个版本，英文版本在前，中文版本在后，参考链接统一放在最后。输出结果中不要暴露原贴用户ID信息，不要提及信息来源平台名称。允许在“参考文献”部分使用来源链接以便核查，但正文中不要直接展示URL。**
 
 Finally, output a JSON object (and ONLY the JSON) at the very end of your response for the cover card, with these fields:
 
 *   `ticker`: The stock symbol (e.g., IONQ).
 *   `sentiment_score`: A number 0-10 (0 bearish, 10 bullish).
-*   `sentiment_label`: A 2-character Chinese word describing the mood (e.g., "积极", "恐慌", "分歧", "狂热"). Avoid using financial investment terms(e.g., "看涨" or "看跌").
-*   `headline`: A professional, insight-driven headline (Max 15 chars, e.g., '量子算力变现能力的验证期').
-*   `key_factors`: A list of 3 short phrases (Max 6 chars each) driving this sentiment (e.g., ["财报超预期", "空头回补", "AI叙事"]).
+*   `sentiment_label`: A 2-character Chinese word describing the mood (e.g., "积极", "恐慌").
+*   `sentiment_label_en`: An English equivalent of the sentiment label (e.g., "Positive", "Fear").
+*   `headline`: A professional headline in Chinese (Max 15 chars).
+*   `headline_en`: A professional headline in English (Max 40 chars).
+*   `key_factors`: A list of 3 short phrases in Chinese (Max 6 chars each).
+*   `key_factors_en`: A list of 3 short phrases in English (Max 15 chars each).
 
 Ensure the JSON is valid and appears at the very end of the response.
 """
